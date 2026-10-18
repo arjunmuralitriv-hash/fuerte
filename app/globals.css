@@ -247,6 +247,14 @@
   text-transform: var(--case-eyebrow);
 }
 
+/* Faint engineering grid behind 3D beat panels and their poster fallbacks. */
+@utility bg-blueprint {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+}
+
 @utility elevation-1 {
   box-shadow: var(--elevation-1);
 }
@@ -291,6 +299,10 @@
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+  /* No page scroll behind a modal dialog (mobile menu, cookie settings). */
+  html:has(dialog:modal) {
+    overflow: hidden;
   }
   ::selection {
     background-color: var(--primary);

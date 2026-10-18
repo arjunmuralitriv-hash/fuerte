@@ -16,11 +16,350 @@
     "switchLanguageLabel": "Read this page in Arabic"
   },
   "home": {
-    "eyebrow": "IT · ELV · Cyber Security · Doha, Qatar",
-    "title": "Technology. Contracting. Zero downtime.",
-    "lead": "Integrated IT infrastructure, ELV systems and cyber security for Qatar's businesses: designed, built and maintained by one accountable partner.",
-    "primaryCta": "Book a free site survey",
-    "secondaryCta": "Request a quote",
-    "phaseNote": "Phase 0 shell. Full content and 3D experience arrive in the next phases."
+    "atAGlance": "At a glance"
+  },
+  "nav": {
+    "label": "Main",
+    "services": "Services",
+    "industries": "Industries",
+    "about": "About",
+    "insights": "Insights",
+    "amcPlans": "AMC plans",
+    "contact": "Contact",
+    "menu": "Open menu",
+    "close": "Close menu",
+    "allServices": "All services",
+    "allIndustries": "All industries",
+    "primaryCta": "Book a free site survey"
+  },
+  "pillars": {
+    "technology": "Technology services",
+    "data-center": "Data center",
+    "elv": "ELV systems",
+    "cyber-security": "Cyber security",
+    "resource-augmentation": "Resource augmentation",
+    "amc": "AMC and support"
+  },
+  "industries": {
+    "government": "Government",
+    "banking": "Banking",
+    "education": "Education",
+    "hospitality-retail": "Hospitality and retail",
+    "oil-gas": "Oil and gas",
+    "healthcare": "Healthcare",
+    "residential": "Residential"
+  },
+  "cta": {
+    "survey": "Book a free site survey",
+    "quote": "Request a quote",
+    "whatsapp": "WhatsApp an engineer",
+    "call": "Call us",
+    "whatsappPrefill": "Hello Fuerte, I'd like to talk to an engineer about {service}.",
+    "whatsappGeneric": "a project"
+  },
+  "mobileBar": {
+    "label": "Quick actions",
+    "survey": "Survey",
+    "quote": "Quote",
+    "whatsapp": "WhatsApp"
+  },
+  "footer": {
+    "tagline": "IT, ELV and cyber security for Qatar's businesses. Designed, built and maintained by one accountable partner.",
+    "services": "Services",
+    "company": "Company",
+    "legal": "Legal",
+    "contact": "Contact",
+    "legalInfo": "Legal information",
+    "legalName": "Legal name",
+    "cr": "Commercial registration",
+    "authority": "Licensing authority",
+    "authorityValue": "Ministry of Commerce and Industry, State of Qatar",
+    "cookieSettings": "Cookie settings",
+    "rights": "All rights reserved.",
+    "emergency": "Under attack? Emergency cyber response",
+    "vendorPack": "Vendor pack",
+    "careers": "Careers",
+    "glossary": "Glossary"
+  },
+  "legalLinks": {
+    "privacy": "Privacy notice",
+    "cookies": "Cookie notice",
+    "terms": "Terms of use",
+    "legal-information": "Legal information",
+    "accessibility-statement": "Accessibility statement",
+    "ai-assistant-notice": "AI assistant notice",
+    "responsible-disclosure": "Responsible disclosure",
+    "data-request": "Data request"
+  },
+  "consent": {
+    "title": "Cookies",
+    "text": "We use essential cookies to run this site. With your permission, we'd also like to use analytics and marketing cookies to improve it and measure our ads. You can change your choice at any time.",
+    "notice": "Cookie notice",
+    "accept": "Accept all",
+    "reject": "Reject all",
+    "choose": "Choose cookies",
+    "save": "Save my choices",
+    "essential": "Essential",
+    "essentialAlways": "Always on",
+    "essentialText": "Needed for the site to work, such as security and remembering your cookie choice.",
+    "analytics": "Analytics",
+    "analyticsText": "Helps us understand which pages are useful. Uses Google Analytics and Microsoft Clarity.",
+    "marketing": "Marketing",
+    "marketingText": "Measures our LinkedIn ads and shows relevant ads on LinkedIn.",
+    "close": "Close"
+  },
+  "content": {
+    "breadcrumb": "Breadcrumb",
+    "home": "Home",
+    "onThisPage": "On this page",
+    "notTranslated": "This page is not yet available in Arabic, so it is shown in English.",
+    "askTitle": "Talk to an engineer",
+    "askBody": "Free site survey, clear scope, and a quote you can take to procurement.",
+    "related": "Explore",
+    "readGuide": "Read the guide",
+    "draftNotice": "Draft content: items marked like this are waiting for Fuerte to confirm."
+  },
+  "indexPages": {
+    "industries": {
+      "title": "Industries",
+      "metaTitle": "Industries We Serve in Qatar | Fuerte",
+      "metaDescription": "IT, ELV and cyber security for government, banking, education, hospitality, oil and gas, healthcare and residential sites in Qatar.",
+      "lead": "Every sector runs on the same building systems, but each has its own rules, risks and pace. Choose yours to see how we work."
+    },
+    "insights": {
+      "title": "Insights",
+      "metaTitle": "Insights: Qatar IT, ELV & Compliance Guides | Fuerte",
+      "metaDescription": "Practical guides on MoI SSD CCTV approval, PDPPL compliance and structured cabling standards in Qatar, from Fuerte's engineers.",
+      "lead": "Practical guides from our engineers on approvals, compliance and the standards behind the systems we build."
+    }
+  },
+  "forms": {
+    "required": "(required)",
+    "send": "Send request",
+    "sending": "Sending…",
+    "tryAgain": "Try again",
+    "errorSummary": "Please fix {count, plural, one {# field} other {# fields}} before sending.",
+    "failedTitle": "We couldn't send your request.",
+    "failedBody": "Something went wrong on our side. Your answers are still here. Try again, or call +974 7125 8588.",
+    "turnstile": "This form is protected by Cloudflare Turnstile.",
+    "privacyLink": "privacy notice",
+    "yes": "Yes",
+    "no": "No",
+    "errors": {
+      "name": "Enter your full name.",
+      "organisation": "Enter your organisation name.",
+      "email": "Enter an email address like name@company.com.",
+      "phone": "Enter an 8-digit Qatar number, or include your country code.",
+      "consent": "Tick the box so we can use your details to reply.",
+      "required": "This field is required.",
+      "services": "Choose at least one service so we can send the right engineer.",
+      "siteType": "Choose the site type that fits best. Pick 'Other' if none match.",
+      "location": "Tell us where the site is.",
+      "fileSize": "This file is larger than 25 MB. Compress it or send it to us by email.",
+      "fileType": "We can't accept this file type. Use PDF, DWG, DOCX, XLSX or ZIP.",
+      "declaration": "Tick the box to confirm your request.",
+      "spam": "We couldn't verify you're human. Please try again."
+    }
+  },
+  "dataRequest": {
+    "title": "Make a data request",
+    "action": "What would you like to do?",
+    "actions": {
+      "access": "Get a copy of my personal data",
+      "correct": "Correct my personal data",
+      "delete": "Delete my personal data",
+      "withdraw": "Withdraw my consent",
+      "object": "Object to how my data is used",
+      "marketing": "Stop marketing emails",
+      "other": "Something else"
+    },
+    "name": "Full name",
+    "email": "Email",
+    "emailHelp": "We'll reply to this address.",
+    "phone": "Phone",
+    "relationship": "Your relationship with Fuerte",
+    "relationships": {
+      "client": "Client",
+      "visitor": "Website visitor or enquirer",
+      "applicant": "Job applicant",
+      "supplier": "Supplier",
+      "other": "Other"
+    },
+    "details": "Details",
+    "detailsHelp": "Tell us what your request is about, for example the email address you used or the date you contacted us.",
+    "onBehalf": "Are you making this request for someone else?",
+    "onBehalfHelp": "If yes, we'll ask for proof that you are authorised to act for them.",
+    "declaration": "I confirm the information I've given is accurate. I understand Fuerte may need to verify my identity before acting on this request.",
+    "success": "We've received your request. Your reference is {reference}. We'll confirm your identity and reply to you by email."
+  },
+  "formCta": {
+    "vendor-pack": {
+      "title": "Request the vendor pack",
+      "body": "Tell us your organisation and the tender or registration it's for, and we'll send the pack. The online request form is coming soon.",
+      "button": "Request by WhatsApp",
+      "prefill": "Hello Fuerte, please send me your vendor pack. Organisation: … Tender/reference: …"
+    },
+    "careers": {
+      "title": "Send your application",
+      "body": "Send us your CV, the role you're interested in and your notice period. Our online application form is coming soon.",
+      "button": "Apply by WhatsApp",
+      "prefill": "Hello Fuerte, I'd like to apply for: … (I'll send my CV here)"
+    }
+  },
+  "rfq": {
+    "title": "Let's talk about your project",
+    "modeLabel": "What would you like?",
+    "modeSurvey": "Book a free site survey",
+    "modeQuote": "Request a quote",
+    "modeHelp": "Not sure? Choose a site survey. We'll visit, scope the work and quote.",
+    "progress": "Step {step} of 5: {name}",
+    "continue": "Continue",
+    "back": "Back",
+    "submitSurvey": "Book my site survey",
+    "submitQuote": "Send request",
+    "skip": "I don't know yet, skip this step",
+    "steps": {
+      "services": "Services",
+      "site": "Site type",
+      "size": "Size",
+      "timeline": "Timeline",
+      "contact": "Contact"
+    },
+    "servicesHeading": "What do you need help with?",
+    "servicesHelp": "Choose all that apply.",
+    "groups": {
+      "network": "Network and cabling",
+      "dataCenter": "Data center",
+      "elv": "ELV systems",
+      "cyber": "Cyber security",
+      "people": "People and support",
+      "other": "Other"
+    },
+    "services": {
+      "network-design": "Network and Wi-Fi",
+      "structured-cabling": "Structured cabling",
+      "unified-communications": "Phone system (VoIP)",
+      "business-applications": "Business applications",
+      "it-consulting": "IT consulting",
+      "data-center-design-build": "Server room or data center",
+      "servers-storage-backup": "Servers, storage and backup",
+      "data-center-network": "Data center network",
+      "cctv": "CCTV",
+      "access-control": "Access control",
+      "fire-alarm": "Fire alarm",
+      "public-address": "Public address",
+      "bms": "BMS",
+      "audio-visual": "Audio-visual and meeting rooms",
+      "home-automation": "Home or building automation",
+      "vapt": "Penetration testing (VAPT)",
+      "managed-soc": "24/7 security monitoring (SOC)",
+      "security-awareness-training": "Staff awareness training",
+      "grc": "Compliance (PDPPL, NIA)",
+      "resource-augmentation": "Engineers for my team",
+      "amc": "Maintenance contract (AMC)",
+      "other": "Something else"
+    },
+    "otherService": "Tell us briefly",
+    "siteHeading": "What kind of site is it?",
+    "siteTypes": {
+      "office": "Office or commercial building",
+      "government": "Government building",
+      "bank": "Bank or financial branch",
+      "education": "School, college or university",
+      "hospitality": "Hotel, mall or retail store",
+      "oilgas": "Oil and gas site, camp or support base",
+      "healthcare": "Hospital, clinic or lab",
+      "residential": "Residential compound, tower or villa",
+      "industrial": "Warehouse or industrial facility",
+      "datacenter": "Data center or server room",
+      "other": "Other"
+    },
+    "stage": "Project stage",
+    "stages": {
+      "new": "New build",
+      "fitout": "Fit-out or renovation",
+      "upgrade": "Upgrade or expansion",
+      "maintenance": "Maintenance of existing systems"
+    },
+    "location": "Where is the site?",
+    "locationHelp": "Area or town, for example West Bay or Lusail.",
+    "sizeHeading": "How big is the job?",
+    "sizeHelp": "Rough numbers are fine. We'll confirm on site.",
+    "size": {
+      "buildings": "Number of buildings",
+      "floors": "Number of floors",
+      "area": "Floor area (m²)",
+      "cameras": "How many cameras, roughly?",
+      "points": "How many data points, roughly?",
+      "doors": "How many controlled doors?",
+      "users": "How many staff or users?",
+      "racks": "How many racks, now and planned?",
+      "engineers": "How many engineers, and which roles?"
+    },
+    "upload": "Drawings, BOQ or tender documents",
+    "uploadHelp": "PDF, DWG, DOCX, XLSX or ZIP, up to 25 MB each.",
+    "timelineHeading": "When do you need it?",
+    "timelines": {
+      "asap": "As soon as possible",
+      "1m": "Within 1 month",
+      "1-3m": "1 to 3 months",
+      "3-6m": "3 to 6 months",
+      "6m+": "More than 6 months",
+      "planning": "Just planning or budgeting"
+    },
+    "deadline": "Tender or submission deadline",
+    "deadlineHelp": "If you're responding to a tender, tell us the deadline.",
+    "budget": "Budget range",
+    "budgets": {
+      "lt50k": "Under QAR 50,000",
+      "50-250k": "QAR 50,000 to 250,000",
+      "250k-1m": "QAR 250,000 to 1 million",
+      "gt1m": "Over QAR 1 million",
+      "unsure": "Not sure yet"
+    },
+    "notes": "Anything else we should know?",
+    "notesPlaceholder": "For example: access restrictions, working hours, existing systems.",
+    "contactHeading": "Where should we send your proposal?",
+    "name": "Full name",
+    "jobTitle": "Job title",
+    "organisation": "Organisation",
+    "email": "Work email",
+    "phone": "Mobile",
+    "preferredContact": "Preferred contact",
+    "contactMethods": {
+      "phone": "Phone call",
+      "whatsapp": "WhatsApp",
+      "email": "Email"
+    },
+    "language": "Preferred language",
+    "languages": {
+      "en": "English",
+      "ar": "العربية"
+    },
+    "consent": "I agree that Fuerte may use these details to respond to this request, as described in the <privacy>privacy notice</privacy>.",
+    "marketing": "Send me occasional updates and guides about Fuerte's services by email. I can unsubscribe at any time.",
+    "successTitle": "Request received. Thank you, {name}.",
+    "successBody": "Your reference is {reference}. An engineer will contact you soon. We've sent a copy to {email}.",
+    "nextTitle": "What happens next",
+    "next1": "We review your request and any files.",
+    "next2": "An engineer calls you to confirm details.",
+    "next3": "We book the site survey or send your quote.",
+    "backHome": "Back to home",
+    "whatsappRef": "WhatsApp us your reference",
+    "sideTitle": "Prefer to talk?",
+    "office": "Office",
+    "phoneLabel": "Phone",
+    "whatsappLabel": "WhatsApp",
+    "emailLabel": "Email",
+    "hours": "Office hours",
+    "emergency": "Under attack? Emergency cyber response",
+    "responseNote": "It takes about 2 minutes. An engineer will get back to you quickly."
+  },
+  "notFound": {
+    "title": "We couldn't find that page.",
+    "body": "The link may be old, or the page may have moved. Try one of these instead.",
+    "home": "Go to the home page",
+    "services": "Browse services",
+    "contact": "Contact us"
   }
 }
