@@ -1,26 +1,318 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   Fuerte design tokens. Source of truth for colour, type, spacing and motion.
+   Spec: design-system/fuerte/MASTER.md and plan section 12.
+   --------------------------------------------------------------------------- */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-stack);
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-heading: var(--font-stack);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-glow: var(--glow);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Fluid type scale: 360px → 1440px viewport. Sizes scale with --script-scale (Arabic +6%);
+   line-height and tracking come from per-script variables below. */
+@theme {
+  --text-display: calc(clamp(2.5rem, 1.5rem + 4.444vw, 5.5rem) * var(--script-scale));
+  --text-display--line-height: var(--lh-display);
+  --text-display--letter-spacing: var(--ls-display);
+  --text-display--font-weight: 600;
+  --text-h1: calc(clamp(2.125rem, 1.5rem + 2.778vw, 4rem) * var(--script-scale));
+  --text-h1--line-height: var(--lh-h1);
+  --text-h1--letter-spacing: var(--ls-h1);
+  --text-h1--font-weight: 600;
+  --text-h2: calc(clamp(1.75rem, 1.4167rem + 1.481vw, 2.75rem) * var(--script-scale));
+  --text-h2--line-height: var(--lh-h2);
+  --text-h2--letter-spacing: var(--ls-h2);
+  --text-h2--font-weight: 600;
+  --text-h3: calc(clamp(1.375rem, 1.2083rem + 0.741vw, 1.875rem) * var(--script-scale));
+  --text-h3--line-height: var(--lh-h3);
+  --text-h3--letter-spacing: var(--ls-h3);
+  --text-h3--font-weight: 600;
+  --text-h4: calc(clamp(1.125rem, 1.0417rem + 0.37vw, 1.375rem) * var(--script-scale));
+  --text-h4--line-height: var(--lh-h4);
+  --text-h4--font-weight: 600;
+  --text-body-lg: calc(clamp(1.125rem, 1.0833rem + 0.185vw, 1.25rem) * var(--script-scale));
+  --text-body-lg--line-height: var(--lh-body-lg);
+  --text-body: calc(clamp(1rem, 0.9792rem + 0.0926vw, 1.0625rem) * var(--script-scale));
+  --text-body--line-height: var(--lh-body);
+  --text-small: calc(0.875rem * var(--script-scale));
+  --text-small--line-height: var(--lh-small);
+
+  --ease-entrance: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  color-scheme: light;
+  --radius: 0.625rem;
+
+  /* Font stacks: next/font sets --font-latin / --font-arabic / --font-plex-mono on <html>. */
+  --font-stack: var(--font-latin), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+
+  /* Per-script typography (Latin defaults). */
+  --script-scale: 1;
+  --lh-display: 1.05;
+  --lh-h1: 1.1;
+  --lh-h2: 1.15;
+  --lh-h3: 1.25;
+  --lh-h4: 1.3;
+  --lh-body-lg: 1.6;
+  --lh-body: 1.65;
+  --lh-small: 1.5;
+  --ls-display: -0.03em;
+  --ls-h1: -0.02em;
+  --ls-h2: -0.015em;
+  --ls-h3: -0.01em;
+  --ls-eyebrow: 0.08em;
+  --case-eyebrow: uppercase;
+
+  /* Colour: Fuerte red on warm-neutral graphite. */
+  --background: #fafaf9;
+  --foreground: #141416;
+  --card: #ffffff;
+  --card-foreground: #141416;
+  --popover: #ffffff;
+  --popover-foreground: #141416;
+  --primary: #bc1704;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f1ef;
+  --secondary-foreground: #141416;
+  --muted: #f1f1ef;
+  --muted-foreground: #5b5b61;
+  --accent: #f6e7e4;
+  --accent-foreground: #141416;
+  --destructive: #b42318;
+  --border: #e4e4e1;
+  --input: #e4e4e1;
+  --ring: #bc1704;
+  --glow: #ff4a2e;
+  --chart-1: #bc1704;
+  --chart-2: #5b5b61;
+  --chart-3: #8a8a90;
+  --chart-4: #c4c4c8;
+  --chart-5: #2a2a2e;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #141416;
+  --sidebar-primary: #bc1704;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f6e7e4;
+  --sidebar-accent-foreground: #141416;
+  --sidebar-border: #e4e4e1;
+  --sidebar-ring: #bc1704;
+
+  /* Elevation (light only; dark lifts with surface colour instead). */
+  --elevation-1: 0 1px 2px rgb(20 20 22 / 0.06), 0 1px 1px rgb(20 20 22 / 0.04);
+  --elevation-2: 0 4px 12px -2px rgb(20 20 22 / 0.08), 0 2px 4px -2px rgb(20 20 22 / 0.06);
+  --elevation-3: 0 16px 40px -8px rgb(20 20 22 / 0.14), 0 6px 12px -6px rgb(20 20 22 / 0.08);
+}
+
+/* Arabic: same family (IBM Plex Sans Arabic), +6% optical size, taller leading, never letter-spaced. */
+:root:lang(ar) {
+  --font-stack: var(--font-arabic), var(--font-latin), ui-sans-serif, system-ui, sans-serif;
+  --script-scale: 1.06;
+  --lh-display: 1.25;
+  --lh-h1: 1.3;
+  --lh-h2: 1.35;
+  --lh-h3: 1.45;
+  --lh-h4: 1.5;
+  --lh-body-lg: 1.85;
+  --lh-body: 1.9;
+  --lh-small: 1.75;
+  --ls-display: 0;
+  --ls-h1: 0;
+  --ls-h2: 0;
+  --ls-h3: 0;
+  --ls-eyebrow: 0;
+  --case-eyebrow: none;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0b0b0d;
+  --foreground: #f4f4f5;
+  --card: #141417;
+  --card-foreground: #f4f4f5;
+  --popover: #141417;
+  --popover-foreground: #f4f4f5;
+  --primary: #d0230c;
+  --primary-foreground: #ffffff;
+  --secondary: #1c1c20;
+  --secondary-foreground: #f4f4f5;
+  --muted: #1c1c20;
+  --muted-foreground: #a1a1a9;
+  --accent: #2a1512;
+  --accent-foreground: #f4f4f5;
+  --destructive: #f04438;
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 15%);
+  --ring: #e5341d;
+  --glow: #ff5a3c;
+  --chart-1: #e5341d;
+  --chart-2: #a1a1a9;
+  --chart-3: #6e6e76;
+  --chart-4: #3a3a40;
+  --chart-5: #f4f4f5;
+  --sidebar: #141417;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #d0230c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a1512;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-ring: #e5341d;
+  --elevation-1: none;
+  --elevation-2: none;
+  --elevation-3: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout and type utilities (plan section 12).
+   --------------------------------------------------------------------------- */
+
+/* 1280px content column with 20 / 32 / 48px gutters. */
+@utility container-page {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  @media (width >= 48rem) {
+    padding-inline: 2rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 3rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Vertical section rhythm: 64 / 96 / 128px. */
+@utility section-y {
+  padding-block: 4rem;
+  @media (width >= 48rem) {
+    padding-block: 6rem;
+  }
+  @media (width >= 64rem) {
+    padding-block: 8rem;
+  }
+}
+
+/* Small label above headings. Uppercase + tracked in Latin, plain in Arabic. */
+@utility eyebrow {
+  font-size: calc(clamp(0.75rem, 0.7292rem + 0.0926vw, 0.8125rem) * var(--script-scale));
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: var(--case-eyebrow);
+}
+
+@utility elevation-1 {
+  box-shadow: var(--elevation-1);
+}
+@utility elevation-2 {
+  box-shadow: var(--elevation-2);
+}
+@utility elevation-3 {
+  box-shadow: var(--elevation-3);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-background text-foreground text-body;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd,
+  blockquote {
+    text-wrap: pretty;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  /* Keyboard focus: 2px ring + 2px offset in both themes. Components with their own ring keep it. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+  /* Arabic letters must join: no tracking anywhere in Arabic pages, whatever a utility says. */
+  :lang(ar),
+  :lang(ar) * {
+    letter-spacing: 0 !important;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }

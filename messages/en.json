@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "title": "Fuerte Technologies & Contracting Services | IT, ELV & Cyber Security in Qatar",
+    "description": "Integrated IT infrastructure, ELV systems and cyber security for businesses in Qatar: designed, built and maintained by one accountable partner."
+  },
+  "common": {
+    "companyName": "Fuerte Technologies & Contracting Services",
+    "loading": "Loading",
+    "skipToContent": "Skip to content",
+    "address": "2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar"
+  },
+  "header": {
+    "home": "Fuerte Technologies home",
+    "toggleTheme": "Switch between light and dark theme",
+    "switchLanguage": "العربية",
+    "switchLanguageLabel": "Read this page in Arabic"
+  },
+  "home": {
+    "eyebrow": "IT · ELV · Cyber Security · Doha, Qatar",
+    "title": "Technology. Contracting. Zero downtime.",
+    "lead": "Integrated IT infrastructure, ELV systems and cyber security for Qatar's businesses: designed, built and maintained by one accountable partner.",
+    "primaryCta": "Book a free site survey",
+    "secondaryCta": "Request a quote",
+    "phaseNote": "Phase 0 shell. Full content and 3D experience arrive in the next phases."
+  }
+}
