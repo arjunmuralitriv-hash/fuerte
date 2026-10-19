@@ -4,8 +4,11 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { preload } from "react-dom";
 
 export type FilmFormat = { path: string; ext: string; count: number };
-/** 16:9 for wide screens, 9:16 rendered separately for phones (framed for the copy at the bottom). */
-export type FilmFormats = { landscape: FilmFormat; portrait: FilmFormat };
+/**
+ * 16:9 for wide screens, 9:16 rendered separately for phones (framed for the copy at the bottom). Wide screens on RTL
+ * pages use landscapeRtl when given: the same film composed with the subject on the left, clear of the copy.
+ */
+export type FilmFormats = { landscape: FilmFormat; landscapeRtl?: FilmFormat; portrait: FilmFormat };
 export type FilmManifest = {
   /** Frame shown when data-beat section N is centred in the viewport; one entry per beat. */
   beats: number[];
@@ -32,6 +35,12 @@ const MAX_DPR = 2;
 const CONCURRENCY = 6;
 const EASE = 0.16; // Per-frame easing toward the scroll target: smooths wheel steps without lag.
 
+/** The cut for this screen and page direction (client only). */
+function pick(formats: FilmFormats): FilmFormat {
+  if (innerHeight > innerWidth) return formats.portrait;
+  return document.documentElement.dir === "rtl" && formats.landscapeRtl ? formats.landscapeRtl : formats.landscape;
+}
+
 const frameUrl = (f: FilmFormat, i: number) => `${f.path}${String(i).padStart(4, "0")}.${f.ext}`;
 
 /** Beat frames first (every beat paints early), then coarse-to-fine strides, so any scroll position has a near frame. */
@@ -49,16 +58,14 @@ function loadOrder(count: number, beats: number[]) {
 export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const theme = useSiteTheme();
-  const portrait = typeof window !== "undefined" && innerHeight > innerWidth;
-  const first = manifest.themes[theme][portrait ? "portrait" : "landscape"];
-  if (typeof window !== "undefined") preload(frameUrl(first, manifest.beats[0]), { as: "image", fetchPriority: "high" });
+  if (typeof window !== "undefined") preload(frameUrl(pick(manifest.themes[theme]), manifest.beats[0]), { as: "image", fetchPriority: "high" });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const root = document.documentElement;
-    const format = manifest.themes[theme][innerHeight > innerWidth ? "portrait" : "landscape"];
+    const format = pick(manifest.themes[theme]);
     const stills =
       matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
     const frames: (HTMLImageElement | undefined)[] = new Array(format.count);

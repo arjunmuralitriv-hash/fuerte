@@ -10,8 +10,8 @@ that section is centred and scrubs the transitions in between.
   5 City       aerial pull-back with network arcs between West Bay's towers; Lusail and The Pearl on the horizon
   6 Settle     calm night, the tower toward the end side, clean sky for the call to action
 
-Run (assets dir, output .blend, optional "--theme light|dark" (default dark), "--format landscape|portrait" (default
-landscape; portrait is the phone framing) and
+Run (assets dir, output .blend, optional "--theme light|dark" (default dark), "--format landscape|landscape-rtl|portrait"
+(default landscape; landscape-rtl mirrors the composition for Arabic pages; portrait is the phone framing) and
 "--render <dir> <w> <h> <samples> <frames>", frames like "1,140" or "1-528:2"):
   blender --background --factory-startup --disable-autoexec --python build_film.py -- <assets> <out.blend> [--theme ...] [--render ...]
 
@@ -56,7 +56,9 @@ def srgb(hex_):
 
 
 DARK = THEME == "dark"
-PORTRAIT = "--format" in ARGS and ARGS[ARGS.index("--format") + 1] == "portrait"
+FORMAT = ARGS[ARGS.index("--format") + 1] if "--format" in ARGS else "landscape"
+PORTRAIT = FORMAT == "portrait"
+RTL = FORMAT == "landscape-rtl"  # Arabic pages: copy on the right, so the subject sits on the left
 GLOW = srgb("#FF5A3C" if DARK else "#FF4A2E")  # --glow: 3D emissive
 BRAND_RED = srgb("#D0230C" if DARK else "#BC1704")  # --primary
 LED_WARM, LED_COOL = (1.0, 0.8, 0.58), (0.86, 0.92, 1.0)  # neutral architectural LEDs, about 3000 K and 6500 K
@@ -1796,9 +1798,15 @@ def camera(scene, col):
         if PORTRAIT:
             aim = subject
         elif offset == "aisle":
-            aim = aisle(6, -0.4, -1.8)
+            aim = aisle(6, -0.4, 1.8 if RTL else -1.8)
         else:
-            aim = tuple(a + b for a, b in zip(subject, offset))
+            off = Vector(offset)
+            if RTL:
+                # Mirror the offset across the line of sight, so the subject lands on the other side of the frame.
+                d = (Vector(subject) - Vector(loc)).to_2d().normalized().to_3d()
+                along = d * off.dot(d)
+                off = along - (off - along)
+            aim = tuple(Vector(subject) + off)
         cam.location = loc
         cam.keyframe_insert("location", frame=f)
         target.location = aim
