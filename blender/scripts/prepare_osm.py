@@ -2,8 +2,9 @@
 
 Run with a Python that has Pillow:  python -P blender/scripts/prepare_osm.py blender/assets/osm
 
+Reads westbay.json (all buildings), coast.json, and optionally lusail.json (Lusail and The Pearl, buildings with heights).
 Writes, in local metres (X east, Y north, origin at Doha Tower):
-  city.json      {"buildings": [{id, name, h, pts}], "coast": [[x, y]...]}; heights from OSM height/levels, estimated when missing
+  city.json     {"buildings": [{id, name, h, pts}], "coast": [[x, y]...]}; heights from OSM height/levels, estimated when missing
   land_mask.png  white = land, black = sea, MASK_M metres per pixel, centred on the origin
 
 Data (c) OpenStreetMap contributors, ODbL 1.0.
@@ -48,11 +49,16 @@ def height(tags):
 
 
 def main():
-    els = json.loads((DIR / "westbay.json").read_text(encoding="utf8"))["elements"]
-    out = []
+    # West Bay (every building) plus, when fetched, Lusail and The Pearl on the northern horizon (buildings with heights).
+    els = []
+    for name in ("westbay.json", "lusail.json"):
+        if (DIR / name).exists():
+            els += json.loads((DIR / name).read_text(encoding="utf8"))["elements"]
+    out, seen = [], set()
     for e in els:
-        if e["type"] != "way" or len(e.get("geometry", ())) < 4:
+        if e["type"] != "way" or len(e.get("geometry", ())) < 4 or e["id"] in seen:
             continue
+        seen.add(e["id"])
         tags = e.get("tags", {})
         name, h = KNOWN.get(e["id"], (tags.get("name:en") or tags.get("name", ""), None))
         pts = [local(p) for p in e["geometry"]]
