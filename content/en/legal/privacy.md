@@ -20,7 +20,7 @@ This notice explains how [CONFIRM: legal name as on the CR] ("Fuerte", "we", "us
 - **Commercial registration:** [CR NUMBER]
 - **Address:** 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar
 - **Phone:** +974 7125 8588
-- **Privacy contact:** [EMAIL] [CONFIRM: dedicated privacy email, e.g. privacy@ the confirmed domain]
+- **Privacy contact:** contact@fuertetechnologies.com [CONFIRM: dedicated privacy email, e.g. privacy@ the confirmed domain]
 
 ## 2. What personal data we collect
 
@@ -108,7 +108,7 @@ Under the PDPPL you can ask us to:
 
 [CONFIRM: final list of rights against the PDPPL text.]
 
-To make a request, use our [data request form](/legal/data-request) or email [EMAIL]. We may need to verify your identity. We aim to respond within [CONFIRM: timeframe]. If you are not satisfied, you can complain to the National Cyber Security Agency. [CONFIRM: competent department name and contact.]
+To make a request, use our [data request form](/legal/data-request) or email contact@fuertetechnologies.com. We may need to verify your identity. We aim to respond within [CONFIRM: timeframe]. If you are not satisfied, you can complain to the National Cyber Security Agency. [CONFIRM: competent department name and contact.]
 
 ## 9. Marketing
 
@@ -124,4 +124,4 @@ We will update this notice when our practices change and show the date at the to
 
 ## 12. Contact us
 
-[EMAIL] · +974 7125 8588 · 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar
+contact@fuertetechnologies.com · +974 7125 8588 · 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar

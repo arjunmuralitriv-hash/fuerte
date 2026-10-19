@@ -16,7 +16,7 @@ primaryKeyword: "الإفصاح المسؤول عن الثغرات فورت"
 
 ## كيفية الإبلاغ
 
-راسلونا على **[EMAIL]** [CONFIRM: dedicated address, e.g. security@ the confirmed domain] مع ما يلي:
+راسلونا على **⁦contact@fuertetechnologies.com⁩** [CONFIRM: dedicated address, e.g. security@ the confirmed domain] مع ما يلي:
 - وصف للثغرة وأثرها المحتمل
 - عنوان URL أو النظام المتأثر
 - تعليمات تفصيلية خطوة بخطوة لإعادة إنتاجها

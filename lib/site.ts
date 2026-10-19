@@ -5,7 +5,8 @@ export const SITE = {
   phoneHref: "tel:+97471258588",
   whatsappNumber: "97471258588",
   legalName: null as string | null, // [CONFIRM]: legal name exactly as on the CR
-  email: null as string | null, // [EMAIL]: domain unconfirmed (fuertetechnologies.com vs fuertechnologies.com)
+  // Domain confirmed 19 Oct 2026; "contact@" is the brochure's mailbox on the corrected domain. Privacy/security/support addresses still [CONFIRM].
+  email: "contact@fuertetechnologies.com" as string | null,
   crNumber: null as string | null, // [CR NUMBER]
   geo: { latitude: 25.2685, longitude: 51.5323 }, // Umm Ghuwailina, approximate until the office pin is confirmed
 } as const;

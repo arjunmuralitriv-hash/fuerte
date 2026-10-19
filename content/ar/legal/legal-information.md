@@ -25,7 +25,7 @@ primaryKeyword: "السجل التجاري فورت"
 | الأنشطة المسجلة | [CONFIRM: activities as listed on the CR] |
 | العنوان المسجل | الطابق الثاني، مبنى الكاظم، أم غويلينة، ص.ب. 9044، الدوحة، قطر [CONFIRM: matches CR] |
 | الهاتف | ⁦+974 7125 8588⁩ |
-| البريد الإلكتروني | [EMAIL] |
+| البريد الإلكتروني | ⁦contact@fuertetechnologies.com⁩ |
 | الموقع الإلكتروني | [CONFIRM: fuertetechnologies.com] |
 | الرخصة التجارية / رخصة البلدية | [CONFIRM: number] |
 | بطاقة المنشأة (البطاقة الحاسوبية) | [CONFIRM: number, if to be shown] |
@@ -43,7 +43,7 @@ primaryKeyword: "السجل التجاري فورت"
 
 ## ملخص التذييل (يظهر في كل صفحة)
 
-«[CONFIRM: legal name] · سجل تجاري رقم [CR NUMBER] · الطابق الثاني، مبنى الكاظم، أم غويلينة، ص.ب. 9044، الدوحة، قطر · ⁦+974 7125 8588⁩ · [EMAIL] · [المعلومات القانونية](/legal/legal-information)»
+«[CONFIRM: legal name] · سجل تجاري رقم [CR NUMBER] · الطابق الثاني، مبنى الكاظم، أم غويلينة، ص.ب. 9044، الدوحة، قطر · ⁦+974 7125 8588⁩ · ⁦contact@fuertetechnologies.com⁩ · [المعلومات القانونية](/legal/legal-information)»
 
 ## الرسائل التجارية
 

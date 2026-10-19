@@ -20,7 +20,7 @@ primaryKeyword: "إشعار الخصوصية فورت"
 - **السجل التجاري:** [CR NUMBER]
 - **العنوان:** الطابق الثاني، مبنى الكاظم، أم غويلينة، ص.ب. 9044، الدوحة، قطر
 - **الهاتف:** ⁦+974 7125 8588⁩
-- **جهة التواصل بشأن الخصوصية:** [EMAIL] [CONFIRM: dedicated privacy email, e.g. privacy@ the confirmed domain]
+- **جهة التواصل بشأن الخصوصية:** ⁦contact@fuertetechnologies.com⁩ [CONFIRM: dedicated privacy email, e.g. privacy@ the confirmed domain]
 
 ## 2. البيانات الشخصية التي نجمعها
 
@@ -108,7 +108,7 @@ primaryKeyword: "إشعار الخصوصية فورت"
 
 [CONFIRM: final list of rights against the PDPPL text.]
 
-لتقديم طلب، استخدموا [نموذج طلبات البيانات](/legal/data-request) أو راسلونا على [EMAIL]. وقد نحتاج إلى التحقق من هويتكم. ونسعى إلى الرد خلال [CONFIRM: timeframe]. وإذا لم تكونوا راضين، يمكنكم تقديم شكوى إلى الوكالة الوطنية للأمن السيبراني. [CONFIRM: competent department name and contact.]
+لتقديم طلب، استخدموا [نموذج طلبات البيانات](/legal/data-request) أو راسلونا على ⁦contact@fuertetechnologies.com⁩. وقد نحتاج إلى التحقق من هويتكم. ونسعى إلى الرد خلال [CONFIRM: timeframe]. وإذا لم تكونوا راضين، يمكنكم تقديم شكوى إلى الوكالة الوطنية للأمن السيبراني. [CONFIRM: competent department name and contact.]
 
 ## 9. التسويق
 
@@ -124,4 +124,4 @@ primaryKeyword: "إشعار الخصوصية فورت"
 
 ## 12. تواصلوا معنا
 
-[EMAIL] · ⁦+974 7125 8588⁩ · الطابق الثاني، مبنى الكاظم، أم غويلينة، ص.ب. 9044، الدوحة، قطر
+⁦contact@fuertetechnologies.com⁩ · ⁦+974 7125 8588⁩ · الطابق الثاني، مبنى الكاظم، أم غويلينة، ص.ب. 9044، الدوحة، قطر

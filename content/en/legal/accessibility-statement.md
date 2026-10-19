@@ -47,7 +47,7 @@ We test with automated tools (axe), keyboard-only navigation, screen readers (NV
 
 If you have trouble using any part of the site, or need information in another format, contact us. We'll do our best to help and aim to reply within [CONFIRM: e.g. 5] working days.
 
-- **Email:** [EMAIL]
+- **Email:** contact@fuertetechnologies.com
 - **Phone:** +974 7125 8588
 - **WhatsApp:** +974 7125 8588
 

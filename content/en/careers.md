@@ -58,7 +58,7 @@ We design, build and protect the systems inside government buildings, banks, sch
 
 ## Recruitment fraud warning
 
-Fuerte never asks candidates to pay any fee for a job, visa or interview. We only contact candidates from [EMAIL] or +974 7125 8588. If someone asks you for money in our name, do not pay. Report it to us.
+Fuerte never asks candidates to pay any fee for a job, visa or interview. We only contact candidates from contact@fuertetechnologies.com or +974 7125 8588. If someone asks you for money in our name, do not pay. Report it to us.
 
 ## Frequently asked questions
 

@@ -16,7 +16,7 @@ We take the security of our systems seriously. If you believe you have found a s
 
 ## How to report
 
-Email **[EMAIL]** [CONFIRM: dedicated address, e.g. security@ the confirmed domain] with:
+Email **contact@fuertetechnologies.com** [CONFIRM: dedicated address, e.g. security@ the confirmed domain] with:
 - a description of the vulnerability and its potential impact
 - the URL or system affected
 - step-by-step instructions to reproduce it

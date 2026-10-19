@@ -152,7 +152,7 @@ Call our incident response line: +974 7125 8588 [CONFIRM: dedicated 24/7 emergen
 - **Company:** Fuerte Technologies & Contracting Services
 - **Based in:** 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar
 - **Phone:** +974 7125 8588
-- **Email:** [EMAIL]
+- **Email:** contact@fuertetechnologies.com
 - **Services:** Technology services, data center, ELV systems, cyber security, resource augmentation, AMC and support
 - **Founded:** [PLACEHOLDER: year founded]
 - **Commercial registration:** [CR NUMBER]

@@ -53,11 +53,11 @@ We send the pack by email, so we know who has our company documents.
 
 **Success message:** "Check your inbox. We've sent the vendor pack to {email}. The link works for 7 days. [CONFIRM: link expiry] Can't see it? Check your spam folder or call +974 7125 8588."
 
-**Error message (send failed):** "We couldn't send the pack just now. Please try again, or email [EMAIL] and we'll send it directly."
+**Error message (send failed):** "We couldn't send the pack just now. Please try again, or email contact@fuertetechnologies.com and we'll send it directly."
 
 ## Need something not in the pack?
 
-Some tenders ask for specific forms, declarations or signed statements. Email [EMAIL] with the tender reference and the deadline, and we'll prepare it.
+Some tenders ask for specific forms, declarations or signed statements. Email contact@fuertetechnologies.com with the tender reference and the deadline, and we'll prepare it.
 
 ## Quick facts for supplier forms
 
@@ -66,7 +66,7 @@ Some tenders ask for specific forms, declarations or signed statements. Email [E
 - **CR number:** [CR NUMBER]
 - **Address:** 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar
 - **Phone:** +974 7125 8588
-- **Email:** [EMAIL]
+- **Email:** contact@fuertetechnologies.com
 - **Website:** [CONFIRM: fuertetechnologies.com]
 - **Year established:** [PLACEHOLDER: year founded]
 - **Activities:** Technology services, data center, ELV systems, cyber security, resource augmentation, maintenance contracts

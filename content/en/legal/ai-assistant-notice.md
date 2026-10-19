@@ -65,4 +65,4 @@ You can ask for a copy of your conversations or ask us to delete them, as descri
 
 ## Contact
 
-[EMAIL] · +974 7125 8588
+contact@fuertetechnologies.com · +974 7125 8588

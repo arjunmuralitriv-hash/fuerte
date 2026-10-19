@@ -68,7 +68,7 @@ Our SLA sets out service credits for missed targets. [CONFIRM: service-credit po
 Yes, on plans with 24/7 cover. Other plans log out-of-hours calls for the next working day, unless the fault is critical.
 
 ### How do we report a fault?
-Call +974 7125 8588, email [EMAIL] or WhatsApp us. Each fault gets a ticket number. [CONFIRM: dedicated support email and portal, if any.]
+Call +974 7125 8588, email contact@fuertetechnologies.com or WhatsApp us. Each fault gets a ticket number. [CONFIRM: dedicated support email and portal, if any.]
 
 ## Keep your systems running
 

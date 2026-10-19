@@ -65,4 +65,4 @@ primaryKeyword: "المساعد الذكي فورت"
 
 ## التواصل
 
-[EMAIL] · ⁦+974 7125 8588⁩
+⁦contact@fuertetechnologies.com⁩ · ⁦+974 7125 8588⁩

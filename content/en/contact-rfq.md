@@ -11,7 +11,7 @@ secondaryKeywords: ["request a quote ELV Qatar", "site survey Doha", "IT contrac
 
 Book a free site survey or request a quote. It takes about 2 minutes. An engineer will get back to you within [CONFIRM: response target, e.g. 1 working day].
 
-**Prefer to talk?** Call +974 7125 8588 · [WhatsApp an engineer](https://wa.me/97471258588) · Email [EMAIL]
+**Prefer to talk?** Call +974 7125 8588 · [WhatsApp an engineer](https://wa.me/97471258588) · Email contact@fuertetechnologies.com
 
 ---
 
@@ -20,7 +20,7 @@ Book a free site survey or request a quote. It takes about 2 minutes. An enginee
 - **Office:** 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar
 - **Phone:** +974 7125 8588
 - **WhatsApp:** +974 7125 8588
-- **Email:** [EMAIL]
+- **Email:** contact@fuertetechnologies.com
 - **Office hours:** [CONFIRM: e.g. Sunday to Thursday, 8:00 to 17:00]
 - **Map:** [PLACEHOLDER: map pin; load the map only after consent, or use a static image]
 - **Under attack?** [Emergency cyber response →](/emergency-cyber-response)
@@ -103,7 +103,7 @@ Fields (shown based on step 1 choices; all optional):
 - **Engineers needed** (shown if resource augmentation): "How many engineers, and which roles?"
 
 **Upload:** Label: "Drawings, BOQ or tender documents" Helper: "PDF, DWG, DOCX, XLSX or ZIP, up to [CONFIRM: 25] MB each." Button: "Add files"
-- **Upload error (size):** "This file is larger than [CONFIRM: 25] MB. Compress it or send it to [EMAIL]."
+- **Upload error (size):** "This file is larger than [CONFIRM: 25] MB. Compress it or send it to contact@fuertetechnologies.com."
 - **Upload error (type):** "We can't accept this file type. Use PDF, DWG, DOCX, XLSX or ZIP."
 
 **Skip link:** "I don't know yet, skip this step"
@@ -201,7 +201,7 @@ An engineer will contact you within [CONFIRM: response target]. If it's urgent, 
 
 Regards,
 The Fuerte team
-+974 7125 8588 · [EMAIL]
++974 7125 8588 · contact@fuertetechnologies.com
 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar
 
 *You received this email because you submitted a request on our website. It is not a marketing email.*

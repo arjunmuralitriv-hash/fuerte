@@ -78,4 +78,4 @@ We may update these terms. The date at the top shows the latest version.
 
 ## 14. Contact
 
-[EMAIL] · +974 7125 8588 · 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar. See also [legal information](/legal/legal-information).
+contact@fuertetechnologies.com · +974 7125 8588 · 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar. See also [legal information](/legal/legal-information).

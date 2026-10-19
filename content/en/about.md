@@ -77,4 +77,4 @@ Safe sites are well-run sites. Every project follows a written HSE plan.
 - [Download our vendor pack](/vendor-pack)
 - [Join our team](/careers)
 
-**Call:** +974 7125 8588 · **Email:** [EMAIL] · **Visit:** 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar
+**Call:** +974 7125 8588 · **Email:** contact@fuertetechnologies.com · **Visit:** 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar

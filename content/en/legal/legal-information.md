@@ -25,7 +25,7 @@ This page provides the information required by Article 51 of Qatar's Electronic 
 | Registered activities | [CONFIRM: activities as listed on the CR] |
 | Registered address | 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar [CONFIRM: matches CR] |
 | Telephone | +974 7125 8588 |
-| Email | [EMAIL] |
+| Email | contact@fuertetechnologies.com |
 | Website | [CONFIRM: fuertetechnologies.com] |
 | Trade licence / municipality licence | [CONFIRM: number] |
 | Establishment (computer) card | [CONFIRM: number, if to be shown] |
@@ -43,7 +43,7 @@ Do not show any licence row that Fuerte does not hold.
 
 ## Footer summary (shown on every page)
 
-"[CONFIRM: legal name] · CR [CR NUMBER] · 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar · +974 7125 8588 · [EMAIL] · [Legal information](/legal/legal-information)"
+"[CONFIRM: legal name] · CR [CR NUMBER] · 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar · +974 7125 8588 · contact@fuertetechnologies.com · [Legal information](/legal/legal-information)"
 
 ## Commercial communications
 

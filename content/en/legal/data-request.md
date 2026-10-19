@@ -33,7 +33,7 @@ Use this form to exercise your rights under Qatar's Personal Data Privacy Protec
 
 **Success:** "We've received your request. Your reference is {reference}. We'll confirm your identity and reply within [CONFIRM: timeframe]."
 
-**Error (send failed):** "We couldn't send your request. Please try again, or email it to [EMAIL]."
+**Error (send failed):** "We couldn't send your request. Please try again, or email it to contact@fuertetechnologies.com."
 
 ## What happens next
 

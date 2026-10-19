@@ -65,4 +65,4 @@ Maps and videos from third parties (such as Google Maps or YouTube) can set thei
 
 ## Contact
 
-Questions? Email [EMAIL] or call +974 7125 8588.
+Questions? Email contact@fuertetechnologies.com or call +974 7125 8588.
