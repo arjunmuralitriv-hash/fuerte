@@ -296,6 +296,26 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  /* Home page copy fades in after the 3D scene has played (components/sections/reveal.tsx). */
+  [data-reveal] {
+    transition:
+      opacity 800ms var(--ease-entrance),
+      translate 800ms var(--ease-entrance);
+  }
+  [data-reveal="pending"] {
+    opacity: 0;
+    translate: 0 1.5rem;
+  }
+  [data-reveal="pending"]:focus-within {
+    opacity: 1;
+    translate: none;
+  }
+  @media (prefers-reduced-motion: reduce), (scripting: none) {
+    [data-reveal="pending"] {
+      opacity: 1;
+      translate: none;
+    }
+  }
   /* No page scroll behind a modal dialog (mobile menu, cookie settings). */
   html:has(dialog:modal) {
     overflow: hidden;
