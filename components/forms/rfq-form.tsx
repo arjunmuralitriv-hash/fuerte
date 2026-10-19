@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { DateField } from "@/components/forms/date-field";
 import { CheckLine, ChoiceCard, controlClass, Field } from "@/components/forms/fields";
 import { ErrorSummary, FailedNotice, SubmitButton, Turnstile, useFormAction } from "@/components/forms/form-shell";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -286,23 +287,18 @@ export function RfqForm() {
             <ChoiceCard key={s} type="radio" name="timeline" value={s} label={t(`timelines.${s}`)} />
           ))}
         </fieldset>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
-          <Field id="rfq-deadline" label={t("deadline")} help={t("deadlineHelp")}>
-            {(d) => <input id="rfq-deadline" name="deadline" type="date" className={controlClass} aria-describedby={d} />}
-          </Field>
-          <Field id="rfq-budget" label={t("budget")}>
-            {(d) => (
-              <select id="rfq-budget" name="budget" defaultValue="" className={controlClass} aria-describedby={d}>
-                <option value="" />
-                {BUDGETS.map((b) => (
-                  <option key={b} value={b}>
-                    {t(`budgets.${b}`)}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
-        </div>
+        <Field id="rfq-deadline" className="mt-8 sm:max-w-sm" label={t("deadline")} help={t("deadlineHelp")}>
+          {(d) => <DateField id="rfq-deadline" name="deadline" describedBy={d} placeholder={t("deadlinePlaceholder")} clearLabel={t("clearDate")} />}
+        </Field>
+        {/* One tap, all options visible: replaces a native select whose list ignored the theme. */}
+        <fieldset className="mt-8">
+          <legend className="text-small font-medium">{t("budget")}</legend>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            {BUDGETS.map((b) => (
+              <ChoiceCard key={b} type="radio" name="budget" value={b} label={t(`budgets.${b}`)} />
+            ))}
+          </div>
+        </fieldset>
         <Field id="rfq-notes" className="mt-6" label={t("notes")}>
           {(d) => <textarea id="rfq-notes" name="notes" rows={4} placeholder={t("notesPlaceholder")} className={`${controlClass} h-auto py-2.5`} aria-describedby={d} />}
         </Field>

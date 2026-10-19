@@ -307,6 +307,8 @@
     },
     "deadline": "Tender or submission deadline",
     "deadlineHelp": "If you're responding to a tender, tell us the deadline.",
+    "deadlinePlaceholder": "Choose a date",
+    "clearDate": "Clear date",
     "budget": "Budget range",
     "budgets": {
       "lt50k": "Under QAR 50,000",

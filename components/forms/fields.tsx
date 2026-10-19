@@ -25,7 +25,7 @@ export function Field({ id, label, required, requiredText, help, error, classNam
   const describedBy = [helpId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <label htmlFor={id} className="text-small font-medium">
+      <label id={`${id}-label`} htmlFor={id} className="text-small font-medium">
         {label}
         {required && requiredText && <span className="ms-1 font-normal text-muted-foreground">{requiredText}</span>}
       </label>
