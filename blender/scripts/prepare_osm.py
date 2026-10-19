@@ -2,9 +2,11 @@
 
 Run with a Python that has Pillow:  python -P blender/scripts/prepare_osm.py blender/assets/osm
 
-Reads westbay.json (all buildings), coast.json, and optionally lusail.json (Lusail and The Pearl, buildings with heights).
+Reads westbay.json (all buildings), coast.json, and optionally lusail.json (Lusail and The Pearl, buildings with heights)
+and parts.json (building:part outlines, which replace the prism of the building they sit in).
 Writes, in local metres (X east, Y north, origin at Doha Tower):
-  city.json     {"buildings": [{id, name, h, pts}], "coast": [[x, y]...]}; heights from OSM height/levels, estimated when missing
+  city.json      {"buildings": [{id, group, name, h, pts}], "coast": [[x, y]...]}; heights from OSM height/levels,
+                 estimated when missing; parts share their host building's group (so they share its architecture)
   land_mask.png  white = land, black = sea, MASK_M metres per pixel, centred on the origin
 
 Data (c) OpenStreetMap contributors, ODbL 1.0.
@@ -48,6 +50,15 @@ def height(tags):
     return rng.uniform(9, 24)
 
 
+def inside(x, y, pts):
+    """Even-odd point-in-polygon test."""
+    hit = False
+    for (ax, ay), (bx, by) in zip(pts, pts[1:] + pts[:1]):
+        if (ay > y) != (by > y) and x < ax + (y - ay) * (bx - ax) / (by - ay):
+            hit = not hit
+    return hit
+
+
 def main():
     # West Bay (every building) plus, when fetched, Lusail and The Pearl on the northern horizon (buildings with heights).
     els = []
@@ -68,7 +79,29 @@ def main():
         area = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))
         if area < 0:
             pts.reverse()
-        out.append({"id": e["id"], "name": name, "h": round(h or height(tags), 1), "pts": pts})
+        out.append({"id": e["id"], "group": e["id"], "name": name, "h": round(h or height(tags), 1), "pts": pts})
+
+    # Mapped building parts (real multi-height massing) replace the single prism of the building they sit in.
+    if (DIR / "parts.json").exists():
+        parts = []
+        for e in json.loads((DIR / "parts.json").read_text(encoding="utf8"))["elements"]:
+            if e["type"] != "way" or len(e.get("geometry", ())) < 4:
+                continue
+            pts = [local(p) for p in e["geometry"]]
+            if pts[0] == pts[-1]:
+                pts.pop()
+            if sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1])) < 0:
+                pts.reverse()
+            parts.append({"id": e["id"], "h": round(height(e.get("tags", {})), 1), "pts": pts})
+        replaced = {}
+        for part in parts:
+            cx = sum(p[0] for p in part["pts"]) / len(part["pts"])
+            cy = sum(p[1] for p in part["pts"]) / len(part["pts"])
+            host = next((b for b in out if b["id"] not in KNOWN and inside(cx, cy, b["pts"])), None)
+            if host:
+                replaced.setdefault(host["id"], []).append({**part, "group": host["id"], "name": host["name"]})
+        out = [b for b in out if b["id"] not in replaced] + [p for ps in replaced.values() for p in ps]
+        print(len(replaced), "buildings rebuilt from", sum(map(len, replaced.values())), "parts")
     coast = [[local(p) for p in w["geometry"]] for w in json.loads((DIR / "coast.json").read_text(encoding="utf8"))["elements"]]
     (DIR / "city.json").write_text(json.dumps({"buildings": out, "coast": coast}), encoding="utf8")
 

@@ -718,64 +718,6 @@ def led_lattice(name, height):
     return m
 
 
-def windows(name, bay, floor_h, lit, tint, warm_share=0.6):
-    """Night tower facade from UVs in metres (u along the perimeter, v up): a grid of office windows, each randomly lit
-    warm or cool or left dark, behind tinted glass, with dark spandrels between floors. Reads at any distance."""
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    nt = m.node_tree
-    L = nt.links.new
-    b = nt.nodes["Principled BSDF"]
-
-    def math_(op, *args):
-        n = node(nt, "ShaderNodeMath", (-400, 0), operation=op)
-        for i, x in enumerate(args):
-            if isinstance(x, (int, float)):
-                n.inputs[i].default_value = x
-            else:
-                L(x, n.inputs[i])
-        return n.outputs[0]
-
-    uv = node(nt, "ShaderNodeUVMap", (-1600, 0))
-    sep = node(nt, "ShaderNodeSeparateXYZ", (-1400, 0))
-    L(uv.outputs[0], sep.inputs[0])
-    cu, cv = math_("DIVIDE", sep.outputs["X"], bay), math_("DIVIDE", sep.outputs["Y"], floor_h)
-    cell = node(nt, "ShaderNodeCombineXYZ", (-900, 200))
-    L(math_("FLOOR", cu), cell.inputs["X"])
-    L(math_("FLOOR", cv), cell.inputs["Y"])
-    noise = node(nt, "ShaderNodeTexWhiteNoise", (-700, 200), noise_dimensions="3D")
-    L(cell.outputs[0], noise.inputs["Vector"])
-    floor_cell = node(nt, "ShaderNodeCombineXYZ", (-900, 400))
-    L(math_("FLOOR", cv), floor_cell.inputs["Y"])
-    floor_cell.inputs["Z"].default_value = 7.3
-    floor_noise = node(nt, "ShaderNodeTexWhiteNoise", (-700, 400), noise_dimensions="3D")
-    L(floor_cell.outputs[0], floor_noise.inputs["Vector"])
-    # Pane mask: inside each cell, away from mullions (u) and the spandrel band (v).
-    pane_u = math_("LESS_THAN", math_("ABSOLUTE", math_("SUBTRACT", math_("FRACT", cu), 0.5)), 0.44)
-    pane_v = math_("LESS_THAN", math_("ABSOLUTE", math_("SUBTRACT", math_("FRACT", cv), 0.55)), 0.33)
-    pane = math_("MULTIPLY", pane_u, pane_v)
-    # Whole floors go dark together sometimes (empty floors, plant rooms), the rest is per-window.
-    on = math_("MULTIPLY", math_("LESS_THAN", noise.outputs["Value"], lit), math_("GREATER_THAN", floor_noise.outputs["Value"], 0.18))
-    sep_c = node(nt, "ShaderNodeSeparateColor", (-500, 0))
-    L(noise.outputs["Color"], sep_c.inputs[0])
-    warm = math_("LESS_THAN", sep_c.outputs[0], warm_share)
-    col_ = node(nt, "ShaderNodeMix", (-200, 0), data_type="RGBA")
-    col_.inputs["A"].default_value = (0.78, 0.88, 1.0, 1)
-    col_.inputs["B"].default_value = (1.0, 0.74, 0.46, 1)
-    L(warm, col_.inputs["Factor"])
-    L(col_.outputs["Result"], b.inputs["Emission Color"])
-    strength = math_("MULTIPLY", math_("MULTIPLY", on, pane), math_("MULTIPLY_ADD", math_("POWER", sep_c.outputs[1], 2.0), 2.2, 0.35))
-    L(strength, b.inputs["Emission Strength"])
-    base = node(nt, "ShaderNodeMix", (-200, -300), data_type="RGBA")
-    base.inputs["A"].default_value = (0.035, 0.035, 0.04, 1)  # spandrel
-    base.inputs["B"].default_value = (*tint, 1)  # glass
-    L(pane, base.inputs["Factor"])
-    L(base.outputs["Result"], b.inputs["Base Color"])
-    L(math_("MULTIPLY_ADD", pane, -0.3, 0.36), b.inputs["Roughness"])
-    L(math_("MULTIPLY_ADD", pane, -0.7, 0.8), b.inputs["Metallic"])
-    return m
-
-
 def revolve(name, centre, h, radius_at, col, mats, rings=48, segs=48):
     """Round tower from its OSM footprint centre: radius_at(t) for t = 0..1 of height h; origin at the base centre."""
     bm = bmesh.new()
@@ -800,30 +742,298 @@ def revolve(name, centre, h, radius_at, col, mats, rings=48, segs=48):
     return ob
 
 
+def rooms_group():
+    """Interior mapping: every window cell is a box-shaped room behind the glass, ray-traced in the shader. Back wall,
+    ceiling with light panels, floor and side walls shift with parallax as the camera moves; rooms are randomly lit
+    warm or cool or dark, some with desk silhouettes, some with blinds half down, and whole floors go dark together.
+    UVs are metres (u along the wall, v up); the wall tangent is derived from the normal, so any footprint works."""
+    if "rooms" in bpy.data.node_groups:
+        return bpy.data.node_groups["rooms"]
+    g = bpy.data.node_groups.new("rooms", "ShaderNodeTree")
+    for name in ("Bay", "FloorH", "Depth", "Lit", "Warm", "Banding"):
+        g.interface.new_socket(name, in_out="INPUT", socket_type="NodeSocketFloat")
+    g.interface.new_socket("Color", in_out="OUTPUT", socket_type="NodeSocketColor")
+    I = node(g, "NodeGroupInput", (-2400, 0)).outputs
+    go = node(g, "NodeGroupOutput", (1400, 0))
+    L = g.links.new
+
+    def vm(op, a, b=None):
+        n = node(g, "ShaderNodeVectorMath", (-1600, -300), operation=op)
+        L(a, n.inputs[0])
+        if b is not None:
+            L(b, n.inputs[1])
+        return n.outputs["Value" if op == "DOT_PRODUCT" else "Vector"]
+
+    def mix(f, a, b):
+        """a + (b - a) * f for floats."""
+        return m_(g, "ADD", a, m_(g, "MULTIPLY", f, m_(g, "SUBTRACT", b, a))) if not isinstance(a, (int, float)) else m_(g, "MULTIPLY_ADD", f, m_(g, "SUBTRACT", b, a), a)
+
+    uv = node(g, "ShaderNodeUVMap", (-2200, 300))
+    suv = node(g, "ShaderNodeSeparateXYZ", (-2000, 300))
+    L(uv.outputs[0], suv.inputs[0])
+    geo = node(g, "ShaderNodeNewGeometry", (-2200, -300))
+    sn = node(g, "ShaderNodeSeparateXYZ", (-2000, -300))
+    L(geo.outputs["Normal"], sn.inputs[0])
+    tan = node(g, "ShaderNodeCombineXYZ", (-1800, -300))
+    L(m_(g, "MULTIPLY", sn.outputs["Y"], -1.0), tan.inputs["X"])
+    L(sn.outputs["X"], tan.inputs["Y"])
+    view = vm("SCALE", geo.outputs["Incoming"])
+    view.node.inputs["Scale"].default_value = -1.0
+    sv = node(g, "ShaderNodeSeparateXYZ", (-1400, -500))
+    L(view, sv.inputs[0])
+
+    cu, cv = m_(g, "DIVIDE", suv.outputs["X"], I["Bay"]), m_(g, "DIVIDE", suv.outputs["Y"], I["FloorH"])
+    px, py = m_(g, "FRACT", cu), m_(g, "FRACT", cv)
+    dx = m_(g, "ADD", m_(g, "DIVIDE", vm("DOT_PRODUCT", view, vm("NORMALIZE", tan.outputs[0])), I["Bay"]), 1e-5)
+    dy = m_(g, "ADD", m_(g, "DIVIDE", sv.outputs["Z"], I["FloorH"]), 1e-5)
+    dz = m_(g, "MAXIMUM", m_(g, "DIVIDE", m_(g, "MULTIPLY", vm("DOT_PRODUCT", view, geo.outputs["Normal"]), -1.0), I["Depth"]), 1e-3)
+    tx = m_(g, "DIVIDE", m_(g, "SUBTRACT", m_(g, "GREATER_THAN", dx, 0.0), px), dx)
+    ty = m_(g, "DIVIDE", m_(g, "SUBTRACT", m_(g, "GREATER_THAN", dy, 0.0), py), dy)
+    tz = m_(g, "DIVIDE", 1.0, dz)
+    t = m_(g, "MINIMUM", m_(g, "MINIMUM", tx, ty), tz)
+    hx, hy, hz = m_(g, "MULTIPLY_ADD", dx, t, px), m_(g, "MULTIPLY_ADD", dy, t, py), m_(g, "MULTIPLY", dz, t)
+    back = m_(g, "MULTIPLY", m_(g, "LESS_THAN", tz, m_(g, "ADD", tx, 1e-4)), m_(g, "LESS_THAN", tz, m_(g, "ADD", ty, 1e-4)))
+    yhit = m_(g, "MULTIPLY", m_(g, "LESS_THAN", ty, tx), m_(g, "SUBTRACT", 1.0, back))
+    side = m_(g, "MAXIMUM", m_(g, "SUBTRACT", m_(g, "SUBTRACT", 1.0, back), yhit), 0.0)
+    up = m_(g, "GREATER_THAN", dy, 0.0)
+    ceil, flr = m_(g, "MULTIPLY", yhit, up), m_(g, "MULTIPLY", yhit, m_(g, "SUBTRACT", 1.0, up))
+
+    cell = node(g, "ShaderNodeCombineXYZ", (-1200, 600))
+    L(m_(g, "FLOOR", cu), cell.inputs["X"])
+    L(m_(g, "FLOOR", cv), cell.inputs["Y"])
+    rnd = node(g, "ShaderNodeTexWhiteNoise", (-1000, 600), noise_dimensions="3D")
+    L(cell.outputs[0], rnd.inputs["Vector"])
+    rc = node(g, "ShaderNodeSeparateColor", (-800, 600))
+    L(rnd.outputs["Color"], rc.inputs[0])
+    r1, r2, r3, r4 = rnd.outputs["Value"], rc.outputs[0], rc.outputs[1], rc.outputs[2]
+    fl = node(g, "ShaderNodeCombineXYZ", (-1200, 800))
+    L(m_(g, "FLOOR", cv), fl.inputs["Y"])
+    fl.inputs["Z"].default_value = 7.3
+    frnd = node(g, "ShaderNodeTexWhiteNoise", (-1000, 800), noise_dimensions="3D")
+    L(fl.outputs[0], frnd.inputs["Vector"])
+
+    # Desk and partition silhouettes along the bottom of the back and side walls.
+    dn = node(g, "ShaderNodeTexNoise", (-800, 300), noise_dimensions="2D")
+    dn.inputs["Scale"].default_value = 3.0
+    dv = node(g, "ShaderNodeCombineXYZ", (-1000, 300))
+    L(m_(g, "ADD", hx, m_(g, "MULTIPLY", r1, 40.0)), dv.inputs["X"])
+    L(m_(g, "MULTIPLY", hz, 2.0), dv.inputs["Y"])
+    L(dv.outputs[0], dn.inputs["Vector"])
+    desk = m_(g, "MULTIPLY", m_(g, "LESS_THAN", hy, 0.3), m_(g, "GREATER_THAN", dn.outputs["Fac"], 0.48))
+    backv = m_(g, "MULTIPLY", m_(g, "MULTIPLY_ADD", hy, 0.45, 0.55), m_(g, "MULTIPLY_ADD", desk, -0.8, 1.0))
+    ceilv = m_(g, "MULTIPLY_ADD", m_(g, "LESS_THAN", m_(g, "FRACT", m_(g, "MULTIPLY_ADD", hz, 3.0, 0.2)), 0.28), 2.6, 0.7)
+    floorv = m_(g, "MULTIPLY", m_(g, "MULTIPLY_ADD", hz, -0.5, 1.0), 0.2)
+    sidev = m_(g, "MULTIPLY", m_(g, "MULTIPLY_ADD", hz, -0.45, 1.0), m_(g, "MULTIPLY", m_(g, "MULTIPLY_ADD", desk, -0.7, 1.0), 0.42))
+    shade = m_(g, "ADD", m_(g, "ADD", m_(g, "MULTIPLY", back, backv), m_(g, "MULTIPLY", ceil, ceilv)), m_(g, "ADD", m_(g, "MULTIPLY", flr, floorv), m_(g, "MULTIPLY", side, sidev)))
+    shade = m_(g, "MULTIPLY", shade, m_(g, "MULTIPLY_ADD", hz, -0.3, 1.0))
+    # Blinds: about a third of the rooms have them partly down (a flat, softly lit band at the top of the window).
+    blind = m_(g, "MULTIPLY", m_(g, "GREATER_THAN", r2, 0.66), m_(g, "MULTIPLY", r3, 0.85))
+    shade = mix(m_(g, "GREATER_THAN", py, m_(g, "SUBTRACT", 1.0, blind)), shade, 0.62)
+
+    by_room = m_(g, "MULTIPLY", m_(g, "LESS_THAN", r1, I["Lit"]), m_(g, "GREATER_THAN", frnd.outputs["Value"], 0.16))
+    by_floor = m_(g, "MULTIPLY", m_(g, "LESS_THAN", frnd.outputs["Value"], I["Lit"]), m_(g, "LESS_THAN", r1, 0.9))
+    lit = mix(I["Banding"], by_room, by_floor)
+    tone = node(g, "ShaderNodeMix", (600, 300), data_type="RGBA")
+    tone.inputs["A"].default_value = (0.8, 0.9, 1.0, 1)
+    tone.inputs["B"].default_value = (1.0, 0.76, 0.5, 1)
+    L(m_(g, "LESS_THAN", r4, I["Warm"]), tone.inputs["Factor"])
+    bright = m_(g, "MULTIPLY", shade, mix(lit, 0.02, m_(g, "MULTIPLY_ADD", r2, 1.3, 0.5)))
+    out = node(g, "ShaderNodeVectorMath", (1000, 0), operation="SCALE")
+    L(tone.outputs["Result"], out.inputs[0])
+    L(bright, out.inputs["Scale"])
+    L(out.outputs["Vector"], go.inputs["Color"])
+    return g
+
+
+def facade(name, bay, floor_h, pane, frame, tint, lit, warm=0.6, depth=5.0, frame_metal=0.8, frame_rough=0.35, strength=1.6, banding=0.0, wash=0.0):
+    """Night facade: an interior-mapped room behind every pane of coated glass, framed by mullions, spandrels or stone in
+    `frame`. pane = (width, height) fraction of each bay x floor cell. Each pane is tilted a hair at random, so sky and
+    city reflections break up pane by pane as on a real curtain wall. banding: 1 lights offices floor by floor.
+    wash: warm uplight on the frame fading up from the base."""
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    b = nt.nodes["Principled BSDF"]
+    L = nt.links.new
+    uv = node(nt, "ShaderNodeUVMap", (-1600, 0))
+    sep = node(nt, "ShaderNodeSeparateXYZ", (-1400, 0))
+    L(uv.outputs[0], sep.inputs[0])
+    cu, cv = m_(nt, "DIVIDE", sep.outputs["X"], bay), m_(nt, "DIVIDE", sep.outputs["Y"], floor_h)
+    pu = m_(nt, "LESS_THAN", m_(nt, "ABSOLUTE", m_(nt, "SUBTRACT", m_(nt, "FRACT", cu), 0.5)), pane[0] / 2)
+    pv = m_(nt, "LESS_THAN", m_(nt, "ABSOLUTE", m_(nt, "SUBTRACT", m_(nt, "FRACT", cv), 0.52)), pane[1] / 2)
+    pn = m_(nt, "MULTIPLY", pu, pv)
+    grp = node(nt, "ShaderNodeGroup", (-600, 400))
+    grp.node_tree = rooms_group()
+    for k, v in (("Bay", bay), ("FloorH", floor_h), ("Depth", depth), ("Lit", lit), ("Warm", warm), ("Banding", banding)):
+        grp.inputs[k].default_value = v
+    rooms = node(nt, "ShaderNodeVectorMath", (-300, 400), operation="SCALE")
+    L(grp.outputs["Color"], rooms.inputs[0])
+    L(m_(nt, "MULTIPLY", pn, strength), rooms.inputs["Scale"])
+    glow = node(nt, "ShaderNodeVectorMath", (-100, 400), operation="ADD")
+    L(rooms.outputs["Vector"], glow.inputs[0])
+    if wash:
+        uplight = node(nt, "ShaderNodeVectorMath", (-300, 600), operation="SCALE")
+        uplight.inputs[0].default_value = (1.0, 0.8, 0.58)
+        fall = m_(nt, "EXPONENT", m_(nt, "DIVIDE", sep.outputs["Y"], -16.0))
+        L(m_(nt, "MULTIPLY", m_(nt, "MULTIPLY", fall, m_(nt, "SUBTRACT", 1.0, pn)), wash), uplight.inputs["Scale"])
+        L(uplight.outputs["Vector"], glow.inputs[1])
+    L(glow.outputs["Vector"], b.inputs["Emission Color"])
+    b.inputs["Emission Strength"].default_value = 1.0
+    L(m_(nt, "MULTIPLY_ADD", pn, 0.9, 1.5), b.inputs["IOR"])  # coated glass reflects far more than clear glass
+    col = node(nt, "ShaderNodeMix", (-300, 0), data_type="RGBA")
+    col.inputs["A"].default_value = (*frame, 1)
+    col.inputs["B"].default_value = (*tint, 1)
+    L(pn, col.inputs["Factor"])
+    L(col.outputs["Result"], b.inputs["Base Color"])
+    L(m_(nt, "MULTIPLY_ADD", pn, 0.03 - frame_rough, frame_rough), b.inputs["Roughness"])
+    L(m_(nt, "MULTIPLY_ADD", pn, -frame_metal, frame_metal), b.inputs["Metallic"])
+    bump = node(nt, "ShaderNodeBump", (-300, -300))
+    bump.inputs["Strength"].default_value = 0.6
+    bump.inputs["Distance"].default_value = 0.04
+    L(pn, bump.inputs["Height"])
+    # Per-pane tilt: nudge the normal along the wall tangent and up by a small random amount per cell.
+    cell = node(nt, "ShaderNodeCombineXYZ", (-900, -500))
+    L(m_(nt, "FLOOR", cu), cell.inputs["X"])
+    L(m_(nt, "FLOOR", cv), cell.inputs["Y"])
+    cell.inputs["Z"].default_value = 3.1
+    wn = node(nt, "ShaderNodeTexWhiteNoise", (-700, -500), noise_dimensions="3D")
+    L(cell.outputs[0], wn.inputs["Vector"])
+    tilt = node(nt, "ShaderNodeVectorMath", (-500, -500), operation="MULTIPLY_ADD")
+    L(wn.outputs["Color"], tilt.inputs[0])
+    tilt.inputs[1].default_value = (0.05, 0.05, 0.05)
+    tilt.inputs[2].default_value = (-0.025, -0.025, -0.025)
+    bent = node(nt, "ShaderNodeVectorMath", (-100, -400), operation="ADD")
+    L(bump.outputs["Normal"], bent.inputs[0])
+    L(tilt.outputs["Vector"], bent.inputs[1])
+    unit_n = node(nt, "ShaderNodeVectorMath", (100, -400), operation="NORMALIZE")
+    L(bent.outputs["Vector"], unit_n.inputs[0])
+    L(unit_n.outputs["Vector"], b.inputs["Normal"])
+    return m
+
+
+# Facade families seen across West Bay, as (bay, floor height, pane w/h, frame colour, glass tint, frame metal, roughness).
+GLASS_TINTS = {"blue": (0.03, 0.06, 0.1), "green": (0.03, 0.07, 0.06), "silver": (0.06, 0.065, 0.07), "bronze": (0.07, 0.05, 0.035)}
+STYLES = {
+    "curtain": (1.5, 4.0, (0.95, 0.88), (0.05, 0.05, 0.055), 0.9, 0.3),
+    "banded": (3.0, 3.9, (0.98, 0.6), (0.62, 0.63, 0.64), 0.9, 0.3),
+    "finned": (2.4, 3.9, (0.9, 0.82), (0.25, 0.26, 0.28), 0.9, 0.35),
+    "stone": (2.2, 3.5, (0.42, 0.58), (0.56, 0.48, 0.37), 0.0, 0.75),
+}
+
+
+def round_corners(pts, rad, segs=3):
+    """Soften sharp footprint corners with short quadratic arcs (many West Bay towers have rounded corners)."""
+    out = []
+    n = len(pts)
+    for k in range(n):
+        a, p, c = pts[k - 1], pts[k], pts[(k + 1) % n]
+        d1, d2 = p - a, c - p
+        if d1.length < 2 or d2.length < 2 or d1.angle(d2, 0) < math.radians(25):
+            out.append(p)
+            continue
+        s = min(rad, 0.35 * d1.length, 0.35 * d2.length)
+        q0, q1 = p - d1.normalized() * s, p + d2.normalized() * s
+        out += [(1 - t) ** 2 * q0 + 2 * (1 - t) * t * p + t * t * q1 for t in (j / segs for j in range(segs + 1))]
+    return out
+
+
+def centroid(pts):
+    return sum(pts, Vector((0, 0))) / len(pts)
+
+
+def shrink(pts, d):
+    """Inset toward the centroid by about d metres (setbacks, podium-to-shaft, crowns)."""
+    c = centroid(pts)
+    r = sum((p - c).length for p in pts) / len(pts)
+    k = max(0.35, (r - d) / r)
+    return [c + (p - c) * k for p in pts]
+
+
+def inside2(p, pts):
+    hit = False
+    for a, b in zip(pts, pts[1:] + pts[:1]):
+        if (a.y > p.y) != (b.y > p.y) and p.x < a.x + (p.y - a.y) * (b.x - a.x) / (b.y - a.y):
+            hit = not hit
+    return hit
+
+
 def doha(col):
-    """Every OSM building footprint in West Bay extruded to its mapped height, lit for blue hour, with neon crowns."""
+    """Every OSM building in West Bay (and Lusail/The Pearl on the horizon) built as architecture rather than a prism:
+    podium, set-back shaft and crown on the towers, a facade family per building (glass curtain wall, aluminium bands,
+    vertical fins or stone with punched windows), interior-mapped rooms behind every window, rooftop plant, neon crowns."""
     data = json.loads((OSM / "city.json").read_text(encoding="utf8"))
-    towers = [
-        windows("office_a", 1.5, 3.9, 0.4, (0.05, 0.08, 0.11)),
-        windows("office_b", 3.0, 4.1, 0.45, (0.06, 0.07, 0.09), warm_share=0.35),
-        windows("office_c", 2.0, 3.8, 0.32, (0.07, 0.09, 0.08)),
-        windows("residential", 1.2, 3.4, 0.3, (0.06, 0.06, 0.07), warm_share=0.85),
-    ]
-    lowrise = windows("lowrise", 2.6, 3.5, 0.25, (0.09, 0.085, 0.08), warm_share=0.9)
-    roof = principled("roof", (0.08, 0.08, 0.09), rough=0.6)
-    neon = [emission(f"neon_{k}", c, 14.0) for k, c in enumerate(NEON)]
-    beacon = emission("tower_beacon", (1.0, 0.08, 0.04), 40.0)
-    mats = towers + [lowrise, roof] + neon + [beacon]
-    LOW, ROOF, NEON0, BEACON = 4, 5, 6, 10
+    mats, index = [], {}
+
+    def mat(key, make):
+        if key not in index:
+            index[key] = len(mats)
+            mats.append(make())
+        return index[key]
+
+    roof = mat("roof", lambda: principled("roof", (0.09, 0.09, 0.1), rough=0.7))
+    neon = [mat(f"neon{k}", lambda c=c, k=k: emission(f"neon_{k}", c, 14.0)) for k, c in enumerate(NEON)]
+    beacon = mat("beacon", lambda: emission("tower_beacon", (1.0, 0.08, 0.04), 40.0))
+    podium_m = mat("podium", lambda: facade("podium", 3.0, 4.6, (0.96, 0.84), (0.08, 0.08, 0.085), (0.05, 0.05, 0.05), 0.85, warm=0.9, depth=8, strength=2.2))
+    crown_m = mat("crown", lambda: facade("crown_louvre", 0.35, 0.5, (0.6, 0.5), (0.18, 0.19, 0.2), (0.02, 0.02, 0.02), 0.0, depth=2))
+
+    def face_mat(style, tint, lit, warm, wash=0.0):
+        key = (style, tint, round(lit, 2), warm, wash)
+        bay, fh, pane, frame, metal, rough = STYLES[style]
+        banding = 0.0 if style == "stone" else 0.85
+        return mat(key, lambda: facade(f"{style}_{tint}_{len(mats)}", bay, fh, pane, frame, GLASS_TINTS[tint], lit, warm=warm, frame_metal=metal, frame_rough=rough, banding=banding, wash=wash))
 
     bm = bmesh.new()
     uvl = bm.loops.layers.uv.new("UVMap")
+    roof_pts, roof_rot = [], []
 
-    def quad(a, b, z0, z1, mat, out=0.0):
-        d = (b - a).normalized()
-        n = Vector((d.y, -d.x)) * out  # footprints are counter-clockwise, so (dy, -dx) points outward
-        v = [bm.verts.new((p.x + n.x, p.y + n.y, z)) for p, z in ((a, z0), (b, z0), (b, z1), (a, z1))]
-        bm.faces.new(v).material_index = mat
+    def walls(pts, z0, z1, m, u):
+        n = len(pts)
+        lo = [bm.verts.new((p.x, p.y, z0)) for p in pts]
+        hi = [bm.verts.new((p.x, p.y, z1)) for p in pts]
+        for k in range(n):
+            f = bm.faces.new((lo[k], lo[(k + 1) % n], hi[(k + 1) % n], hi[k]))
+            f.material_index = m
+            w = (pts[(k + 1) % n] - pts[k]).length
+            for loop, uv in zip(f.loops, ((u, z0), (u + w, z0), (u + w, z1), (u, z1))):
+                loop[uvl].uv = uv
+            u += w
+        return hi
+
+    def cap(ring_):
+        try:
+            bm.faces.new(ring_).material_index = roof
+        except ValueError:
+            pass
+
+    def ledge(pts, z, out, thick, m):
+        """Horizontal band around the outline, projecting `out` metres (slab edges, canopies, banded facades)."""
+        outer = shrink(pts, -out)
+        n = len(pts)
+        lo = [bm.verts.new((p.x, p.y, z)) for p in outer]
+        hi = [bm.verts.new((p.x, p.y, z + thick)) for p in outer]
+        inner = [bm.verts.new((p.x, p.y, z + thick)) for p in pts]
+        inner_lo = [bm.verts.new((p.x, p.y, z)) for p in pts]
+        for k in range(n):
+            j = (k + 1) % n
+            for quad_ in ((lo[k], lo[j], hi[j], hi[k]), (hi[k], hi[j], inner[j], inner[k]), (inner_lo[k], inner_lo[j], lo[j], lo[k])):
+                bm.faces.new(quad_).material_index = m
+
+    def fins(pts, z0, z1, spacing, depth_, m):
+        n = len(pts)
+        for k in range(n):
+            a, b = pts[k], pts[(k + 1) % n]
+            e = b - a
+            if e.length < spacing:
+                continue
+            d = e.normalized()
+            nrm = Vector((d.y, -d.x))
+            ang = math.atan2(d.y, d.x)
+            for j in range(1, int(e.length / spacing)):
+                q = a + d * (j * spacing) + nrm * (depth_ / 2)
+                r = bmesh.ops.create_cube(bm, size=1, matrix=Matrix.LocRotScale((q.x, q.y, (z0 + z1) / 2), Euler((0, 0, ang)), (0.16, depth_, z1 - z0)))
+                for v in r["verts"]:
+                    for f in v.link_faces:
+                        f.material_index = m
 
     for b in data["buildings"]:
         pts = []
@@ -838,53 +1048,105 @@ def doha(col):
         h = b["h"]
         kind = SPECIAL.get(b["id"])
         if kind:
-            centre = sum(pts, Vector((0, 0))) / len(pts)
+            centre = centroid(pts)
             r = sum((p - centre).length for p in pts) / len(pts)
             if kind == "tornado":
-                revolve("tornado_tower", centre, h, lambda t: r * (0.7 + 0.3 * ((t - 0.6) / 0.6) ** 2), col, [led_lattice("tornado_led", h), roof])
+                revolve("tornado_tower", centre, h, lambda t: r * (0.7 + 0.3 * ((t - 0.6) / 0.6) ** 2), col, [led_lattice("tornado_led", h), mats[roof]])
             else:
-                revolve("doha_tower", centre, h * 0.93, lambda t: r * (1.0 if t < 0.84 else math.sqrt(max(0.04, 1 - ((t - 0.84) / 0.16) ** 2))), col, [windows("doha_tower_screen", 0.9, 3.0, 0.55, (0.1, 0.09, 0.08), warm_share=0.95), roof])
+                screen = facade("doha_tower_screen", 0.9, 3.0, (0.55, 0.6), (0.16, 0.15, 0.14), (0.04, 0.04, 0.04), 0.6, warm=0.95, frame_metal=0.9)
+                revolve("doha_tower", centre, h * 0.93, lambda t: r * (1.0 if t < 0.84 else math.sqrt(max(0.04, 1 - ((t - 0.84) / 0.16) ** 2))), col, [screen, mats[roof]])
                 bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=h * 0.09, location=(centre.x, centre.y, h * 0.955))
                 spire = bpy.context.object
-                spire.data.materials.append(neon[0])
+                spire.data.materials.append(mats[neon[0]])
                 for c in spire.users_collection:
                     c.objects.unlink(spire)
                 col.objects.link(spire)
             continue
-        mat = RNG.randrange(0, 3) if h >= 60 else (RNG.randrange(0, 4) if h > 28 else LOW)
-        lo = [bm.verts.new((p.x, p.y, 0)) for p in pts]
-        hi = [bm.verts.new((p.x, p.y, h)) for p in pts]
-        n = len(pts)
-        u = RNG.uniform(0, 5000)  # random start so neighbouring towers don't share a lighting pattern
-        for k in range(n):
-            f = bm.faces.new((lo[k], lo[(k + 1) % n], hi[(k + 1) % n], hi[k]))
-            f.material_index = mat
-            w = (pts[(k + 1) % n] - pts[k]).length
-            for loop, uv in zip(f.loops, ((u, 0), (u + w, 0), (u + w, h), (u, h))):
-                loop[uvl].uv = uv
-            u += w
-        try:
-            bm.faces.new(hi).material_index = ROOF
-        except ValueError:
-            pass
+
+        rng = random.Random(b.get("group", b["id"]))  # parts of one building share its architecture
+        u = rng.uniform(0, 5000)  # random start so neighbouring towers don't share a lighting pattern
+        if h < 45:
+            # Low and mid-rise: stone or render with punched windows and a parapet.
+            if rng.random() < 0.3 and len(pts) <= 12:
+                pts = round_corners(pts, 2.5)
+            m = face_mat("stone", "silver", 0.22 if h < 14 else 0.3, 0.9)
+            walls(pts, 0, h, m, u)
+            cap(walls(shrink(pts, 0.25), h, h + 0.9, m, u))
+            continue
+
+        style = rng.choices(("curtain", "banded", "finned", "stone"), weights=(5, 3, 2, 2 if h < 150 else 1))[0]
+        tint = rng.choice(tuple(GLASS_TINTS))
+        m = face_mat(style, tint, rng.choice((0.3, 0.38, 0.46)), rng.choice((0.35, 0.6, 0.85)) if style == "stone" else rng.choice((0.15, 0.3, 0.5)), wash=rng.choice((0.0, 0.0, 1.2)))
+        if rng.random() < 0.45 and len(pts) <= 14:
+            pts = round_corners(pts, rng.uniform(3, 7))
+        r = sum((p - centroid(pts)).length for p in pts) / len(pts)
+
+        # Podium: retail glass at the base; the shaft steps in above it.
+        z = 0.0
+        shaft = pts
+        if h >= 70 and r >= 16 and b.get("group", b["id"]) == b["id"]:
+            pod = rng.choice((9.2, 13.8, 18.4))
+            walls(pts, 0, pod, podium_m, u)
+            ledge(pts, 4.6, 2.4, 0.45, mat("canopy", lambda: principled("canopy", (0.7, 0.71, 0.72), rough=0.3, metal=0.9)))
+            cap(walls(pts, pod, pod + 0.01, podium_m, u))
+            shaft = shrink(pts, rng.uniform(2.5, 4.5))
+            z = pod
+        crown_h = min(max(0.06 * h, 6.0), 18.0)
+        top = h - crown_h
+        walls(shaft, z, top, m, u)
+        if style == "banded":
+            fh = STYLES["banded"][1]
+            for k in range(int((top - z) / fh)):
+                ledge(shaft, z + k * fh + fh * 0.6, 0.45, 0.32, mat("band_alu", lambda: principled("band_alu", (0.65, 0.66, 0.68), rough=0.3, metal=0.9)))
+        elif style == "finned":
+            fins(shaft, z, top, 2.4, 0.6, mat("fin_metal", lambda: principled("fin_metal", (0.3, 0.31, 0.33), rough=0.35, metal=0.9)))
+        # Crown: a set-back plant level wrapped in a louvred screen, sometimes a taller open frame above the roof.
+        crown = shrink(shaft, 1.2)
+        ring_ = walls(crown, top, h, crown_m, u)
+        cap(ring_)
+        ledge(shaft, top - 0.4, 0.3, 0.4, mat("band_alu", lambda: principled("band_alu", (0.65, 0.66, 0.68), rough=0.3, metal=0.9)))
+        crest = h
+        if h >= 110 and rng.random() < 0.4:
+            crest = h + rng.uniform(5, 12)
+            walls(shaft, h, crest, mat("crown_frame", lambda: principled("crown_frame", (0.55, 0.56, 0.58), rough=0.3, metal=0.9)), u)
+        # Rooftop plant (Poly Haven exterior_aircon_unit) inside the crown outline.
+        c = centroid(crown)
+        for _ in range(rng.randint(2, 6)):
+            p = c + Vector((rng.uniform(-1, 1), rng.uniform(-1, 1))) * r * 0.45
+            if inside2(p, crown):
+                roof_pts.append((p.x, p.y, h))
+                roof_rot.append(rng.choice((0, math.pi / 2)))
         if h >= 90:
-            # Neon crown along the roof edge; some towers also get lit corner lines, as many West Bay towers do.
-            glow = NEON0 + RNG.choices(range(4), weights=(3, 2, 3, 1))[0]
-            for k in range(n):
-                quad(pts[k], pts[(k + 1) % n], h - 2.4, h - 0.6, glow, out=0.35)
-            if RNG.random() < 0.35:
-                for k in range(n):
-                    a, p, c = pts[k - 1], pts[k], pts[(k + 1) % n]
-                    turn = (p - a).normalized().angle((c - p).normalized(), 0)
-                    if turn > math.radians(35):
-                        bis = ((p - a).normalized() - (c - p).normalized()).normalized()
-                        side = Vector((-bis.y, bis.x)) * 0.35
-                        quad(p - side, p + side, 2, h - 2.4, glow, out=0)
+            # Neon crown line at the top edge; some towers also get lit corner lines, as many West Bay towers do.
+            glow = neon[rng.choices(range(4), weights=(3, 2, 3, 1))[0]]
+            ledge(shaft, crest - 1.6, 0.12, 1.0, glow)
+            if rng.random() < 0.3:
+                for k in range(len(shaft)):
+                    a, p, cc = shaft[k - 1], shaft[k], shaft[(k + 1) % len(shaft)]
+                    if (p - a).length > 0.5 and (cc - p).length > 0.5 and (p - a).angle(cc - p, 0) > math.radians(35):
+                        bis = ((p - a).normalized() - (cc - p).normalized()).normalized()
+                        side = Vector((-bis.y, bis.x)) * 0.3
+                        v = [bm.verts.new((q.x, q.y, zz)) for q, zz in ((p - side, z + 2), (p + side, z + 2), (p + side, top), (p - side, top))]
+                        bm.faces.new(v).material_index = glow
         if h > 150:
-            ico = bmesh.ops.create_icosphere(bm, subdivisions=1, radius=1.0, matrix=Matrix.Translation((pts[0].x, pts[0].y, h + 1.2)))
+            if rng.random() < 0.3:
+                sc = centroid(shaft)
+                bpy.ops.mesh.primitive_cylinder_add(radius=0.6, depth=h * 0.1, vertices=12, location=(sc.x, sc.y, crest + h * 0.05))
+                sp = bpy.context.object
+                sp.data.materials.append(bpy.data.materials["crown_frame"] if "crown_frame" in bpy.data.materials else mats[roof])
+                for cc in sp.users_collection:
+                    cc.objects.unlink(sp)
+                col.objects.link(sp)
+                crest += h * 0.1
+            ico = bmesh.ops.create_icosphere(bm, subdivisions=1, radius=1.0, matrix=Matrix.Translation((*centroid(crown), crest + 1.2)))
             for f in {f for v in ico["verts"] for f in v.link_faces}:
-                f.material_index = BEACON
+                f.material_index = beacon
     obj_from_bmesh("west_bay", bm, col, mats)
+
+    src = collection("roof_src", hide=True)
+    unit = join(append_objects(next((ASSETS / "polyhaven/models/exterior_aircon_unit").glob("*.blend")), src), "aircon")
+    unit.data.transform(Matrix.Scale(2.2, 4))  # a packaged rooftop chiller rather than a split unit
+    instancer("roof_plant", roof_pts, roof_rot, src, col)
 
 
 def corniche(col):
