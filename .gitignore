@@ -46,3 +46,6 @@ next-env.d.ts
 
 # generated QA frames for /dev/film
 /public/film-test/
+
+# Blender source assets (downloaded, licences in blender/CREDITS.md)
+/blender/assets/
