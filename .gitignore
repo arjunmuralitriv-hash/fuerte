@@ -43,3 +43,6 @@ next-env.d.ts
 
 # parallel dev output
 /.next-*/
+
+# generated QA frames for /dev/film
+/public/film-test/
