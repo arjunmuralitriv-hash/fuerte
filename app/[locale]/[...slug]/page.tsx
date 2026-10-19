@@ -68,7 +68,7 @@ async function IndexPage({ locale, slug }: { locale: Locale; slug: string }) {
             <Link href={p.slug} className="group flex h-full flex-col rounded-2xl border bg-card p-6 transition-colors hover:border-primary/40 elevation-1">
               <span lang={p.contentLocale} className="text-h4">{p.h1}</span>
               <span lang={p.contentLocale} className="mt-3 text-small text-muted-foreground">{p.fm.metaDescription}</span>
-              <ArrowRight aria-hidden className="mt-6 size-5 text-primary transition-transform group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1" />
+              <ArrowRight aria-hidden className="mt-6 size-5 text-primary-ink transition-transform group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1" />
             </Link>
           </li>
         ))}

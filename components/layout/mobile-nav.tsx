@@ -26,7 +26,7 @@ export function MobileNav({ nav }: { nav: Nav }) {
       href={l.href}
       onClick={close}
       aria-current={pathname === l.href ? "page" : undefined}
-      className={cn(className, pathname === l.href && "text-primary")}
+      className={cn(className, pathname === l.href && "text-primary-ink")}
     >
       {l.label}
     </Link>
@@ -71,14 +71,14 @@ export function MobileNav({ nav }: { nav: Nav }) {
                   {pillar.children.map((child) => link(child, cn(sub, "ps-9")))}
                 </div>
               ))}
-              {link({ href: "/services", label: t("nav.allServices") }, cn(sub, "font-semibold text-primary"))}
+              {link({ href: "/services", label: t("nav.allServices") }, cn(sub, "font-semibold text-primary-ink"))}
             </>,
           )}
           {group(
             t("nav.industries"),
             <>
               {nav.industries.map((l) => link(l, sub))}
-              {link({ href: "/industries", label: t("nav.allIndustries") }, cn(sub, "font-semibold text-primary"))}
+              {link({ href: "/industries", label: t("nav.allIndustries") }, cn(sub, "font-semibold text-primary-ink"))}
             </>,
           )}
           {nav.links.map((l) => link(l, row))}

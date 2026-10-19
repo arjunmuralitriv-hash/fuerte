@@ -21,7 +21,7 @@ export function DataRequestForm() {
   if (state.status === "success") {
     return (
       <div role="status" className="mt-8 flex gap-4 rounded-2xl border bg-card p-6">
-        <CheckCircle2 aria-hidden className="size-6 shrink-0 text-primary" />
+        <CheckCircle2 aria-hidden className="size-6 shrink-0 text-primary-ink" />
         <p className="text-body">{t("success", { reference: state.reference })}</p>
       </div>
     );

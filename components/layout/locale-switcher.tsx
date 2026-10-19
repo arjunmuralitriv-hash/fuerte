@@ -16,7 +16,6 @@ export function LocaleSwitcher() {
       locale={other}
       hrefLang={other}
       lang={other}
-      aria-label={t("switchLanguageLabel")}
       className={buttonVariants({ variant: "ghost", size: "xl", className: "px-3 font-medium" })}
     >
       {t("switchLanguage")}

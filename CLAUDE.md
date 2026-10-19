@@ -12,6 +12,7 @@ Approved plan: `C:\Users\arjun\.claude\plans\please-go-through-company-synchrono
 - Mobile-first. Meet the performance budgets in plan section 10. The LCP element is never the WebGL canvas.
 - Typography and spacing follow plan section 12. Use tokens only, no arbitrary px values. Arabic is never letter-spaced or uppercased.
 - Use logical properties only (`ps-`/`pe-`/`ms-`/`me-`/`start`/`end`) so RTL mirrors automatically.
+- Red text and icons use `text-primary-ink` (AA in both themes); `primary` is for fills such as buttons.
 - Loading states use `components/ui/loader.tsx` (Thinking Orbs). One orb state = one meaning (plan section 11).
 - Never claim certifications or licences (ISO, ICV, MoI SSD, QCDD) unless confirmed. Never name competitors.
 - Legal/compliance rules in plan section 5 (PDPPL consent, E-Commerce Law Art. 51 disclosure, Arabic Language Law).

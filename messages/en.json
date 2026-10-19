@@ -10,10 +10,8 @@
     "address": "2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar"
   },
   "header": {
-    "home": "Fuerte Technologies home",
     "toggleTheme": "Switch between light and dark theme",
-    "switchLanguage": "العربية",
-    "switchLanguageLabel": "Read this page in Arabic"
+    "switchLanguage": "العربية"
   },
   "home": {
     "atAGlance": "At a glance"

@@ -10,10 +10,8 @@
     "address": "الطابق الثاني، مبنى الكاظم، أم غويلينة، ص.ب. 9044، الدوحة، قطر"
   },
   "header": {
-    "home": "الصفحة الرئيسية لفورت تكنولوجيس",
     "toggleTheme": "التبديل بين المظهر الفاتح والداكن",
-    "switchLanguage": "English",
-    "switchLanguageLabel": "اقرأ هذه الصفحة باللغة الإنجليزية"
+    "switchLanguage": "English"
   },
   "home": {
     "atAGlance": "لمحة سريعة"

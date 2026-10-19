@@ -90,7 +90,7 @@ export async function Markdown({ source, ctx, className }: { source: string; ctx
             href={tertiaryHref}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 font-medium underline decoration-primary underline-offset-4"
           >
-            {tertiaryHref.includes("wa.me") && <MessageCircle aria-hidden className="size-5 text-primary" />}
+            {tertiaryHref.includes("wa.me") && <MessageCircle aria-hidden className="size-5 text-primary-ink" />}
             {tertiary ? tertiary[1] : label(spec.tertiary)}
           </SmartLink>
         )}
@@ -111,7 +111,7 @@ export async function Markdown({ source, ctx, className }: { source: string; ctx
     h3: ({ children }) => <h3 className="mt-10 text-h3">{children}</h3>,
     h4: ({ children }) => <h4 className="mt-8 text-h4">{children}</h4>,
     p: ({ children }) => <p className="mt-4 text-body">{children}</p>,
-    ul: ({ children }) => <ul className="mt-4 list-disc space-y-2 ps-6 marker:text-primary">{children}</ul>,
+    ul: ({ children }) => <ul className="mt-4 list-disc space-y-2 ps-6 marker:text-primary-ink">{children}</ul>,
     ol: ({ children }) => <ol className="mt-4 list-decimal space-y-3 ps-6 marker:font-medium marker:text-muted-foreground">{children}</ol>,
     li: ({ children }) => <li className="ps-1 text-body [&>p]:mt-0">{children}</li>,
     strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
@@ -136,7 +136,7 @@ export async function Markdown({ source, ctx, className }: { source: string; ctx
     summary: ({ children }) => (
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-6 text-h4 [&::-webkit-details-marker]:hidden">
         <span>{children}</span>
-        <Plus aria-hidden className="size-5 shrink-0 text-primary transition-transform duration-250 group-open:rotate-45" />
+        <Plus aria-hidden className="size-5 shrink-0 text-primary-ink transition-transform duration-250 group-open:rotate-45" />
       </summary>
     ),
     pre: ({ node, children }) => {

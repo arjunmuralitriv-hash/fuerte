@@ -129,11 +129,11 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
                 rel="noopener noreferrer"
                 className="mt-3 flex min-h-11 items-center gap-2 text-small font-medium"
               >
-                <MessageCircle aria-hidden className="size-5 text-primary" />
+                <MessageCircle aria-hidden className="size-5 text-primary-ink" />
                 {cta("whatsapp")}
               </a>
               <a href={SITE.phoneHref} className="flex min-h-11 items-center gap-2 text-small font-medium">
-                <Phone aria-hidden className="size-5 text-primary" />
+                <Phone aria-hidden className="size-5 text-primary-ink" />
                 <span dir="ltr" className="tabular-nums">{SITE.phoneDisplay}</span>
               </a>
             </div>

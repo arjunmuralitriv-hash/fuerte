@@ -35,8 +35,9 @@ export default async function ContactPage({ params }: Params) {
   const t = await getTranslations("rfq");
   const tc = await getTranslations();
   const crumbs = [{ label: tc("content.home"), href: "/" }, { label: page.h1 }];
-  const row = "flex gap-3 py-4";
-  const icon = "mt-0.5 size-5 shrink-0 text-primary";
+  // Each row is only a dt/dd pair (valid <dl>); the icon sits in the dt, hung in the start gutter.
+  const row = "relative py-4 ps-8";
+  const icon = "absolute start-0 top-4 size-5 text-primary-ink";
 
   return (
     <main id="main">
@@ -66,61 +67,61 @@ export default async function ContactPage({ params }: Params) {
             <h2 id="contact-side" className="text-h4">{t("sideTitle")}</h2>
             <dl className="mt-2 divide-y text-small">
               <div className={row}>
-                <Phone aria-hidden className={icon} />
-                <div>
-                  <dt className="text-muted-foreground">{t("phoneLabel")}</dt>
-                  <dd className="mt-1 font-medium">
-                    <a href={SITE.phoneHref} dir="ltr" className="inline-flex min-h-11 items-center tabular-nums hover:text-primary sm:min-h-0">{SITE.phoneDisplay}</a>
-                  </dd>
-                </div>
+                <dt className="text-muted-foreground">
+                  <Phone aria-hidden className={icon} />
+                  {t("phoneLabel")}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  <a href={SITE.phoneHref} dir="ltr" className="inline-flex min-h-11 items-center tabular-nums hover:text-primary-ink sm:min-h-0">{SITE.phoneDisplay}</a>
+                </dd>
               </div>
               <div className={row}>
-                <MessageCircle aria-hidden className={icon} />
-                <div>
-                  <dt className="text-muted-foreground">{t("whatsappLabel")}</dt>
-                  <dd className="mt-1 font-medium">
-                    <a
-                      href={whatsappHref(tc("cta.whatsappPrefill", { service: tc("cta.whatsappGeneric") }))}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center hover:text-primary sm:min-h-0"
-                    >
-                      {tc("cta.whatsapp")}
-                    </a>
-                  </dd>
-                </div>
+                <dt className="text-muted-foreground">
+                  <MessageCircle aria-hidden className={icon} />
+                  {t("whatsappLabel")}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  <a
+                    href={whatsappHref(tc("cta.whatsappPrefill", { service: tc("cta.whatsappGeneric") }))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center hover:text-primary-ink sm:min-h-0"
+                  >
+                    {tc("cta.whatsapp")}
+                  </a>
+                </dd>
               </div>
               <div className={row}>
-                <Mail aria-hidden className={icon} />
-                <div>
-                  <dt className="text-muted-foreground">{t("emailLabel")}</dt>
-                  <dd className="mt-1 font-medium">
-                    {SITE.email ? <a href={`mailto:${SITE.email}`} className="hover:text-primary">{SITE.email}</a> : <Placeholder>EMAIL</Placeholder>}
-                  </dd>
-                </div>
+                <dt className="text-muted-foreground">
+                  <Mail aria-hidden className={icon} />
+                  {t("emailLabel")}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {SITE.email ? <a href={`mailto:${SITE.email}`} className="hover:text-primary-ink">{SITE.email}</a> : <Placeholder>EMAIL</Placeholder>}
+                </dd>
               </div>
               <div className={row}>
-                <MapPin aria-hidden className={icon} />
-                <div>
-                  <dt className="text-muted-foreground">{t("office")}</dt>
-                  <dd className="mt-1">
-                    <address className="not-italic">{tc("common.address")}</address>
-                  </dd>
-                </div>
+                <dt className="text-muted-foreground">
+                  <MapPin aria-hidden className={icon} />
+                  {t("office")}
+                </dt>
+                <dd className="mt-1">
+                  <address className="not-italic">{tc("common.address")}</address>
+                </dd>
               </div>
               <div className={row}>
-                <Clock aria-hidden className={icon} />
-                <div>
-                  <dt className="text-muted-foreground">{t("hours")}</dt>
-                  <dd className="mt-1">
-                    <Placeholder>CONFIRM office hours</Placeholder>
-                  </dd>
-                </div>
+                <dt className="text-muted-foreground">
+                  <Clock aria-hidden className={icon} />
+                  {t("hours")}
+                </dt>
+                <dd className="mt-1">
+                  <Placeholder>CONFIRM office hours</Placeholder>
+                </dd>
               </div>
             </dl>
             <Link
               href="/emergency-cyber-response"
-              className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-small font-semibold text-primary hover:bg-primary/10"
+              className="mt-4 flex min-h-11 items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-small font-semibold text-primary-ink hover:bg-primary/10"
             >
               <ShieldAlert aria-hidden className="size-4 shrink-0" />
               {t("emergency")}

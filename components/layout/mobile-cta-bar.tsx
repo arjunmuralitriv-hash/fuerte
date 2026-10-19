@@ -23,7 +23,7 @@ export function MobileCtaBar() {
         {t("mobileBar.survey")}
       </Link>
       <Link href={{ pathname: "/contact", query: { type: "quote" } }} className={`${item} hover:bg-muted`}>
-        <FileText aria-hidden className="size-5 text-primary" />
+        <FileText aria-hidden className="size-5 text-primary-ink" />
         {t("mobileBar.quote")}
       </Link>
       <a
@@ -32,7 +32,7 @@ export function MobileCtaBar() {
         rel="noopener noreferrer"
         className={`${item} hover:bg-muted`}
       >
-        <MessageCircle aria-hidden className="size-5 text-primary" />
+        <MessageCircle aria-hidden className="size-5 text-primary-ink" />
         {t("mobileBar.whatsapp")}
       </a>
     </nav>

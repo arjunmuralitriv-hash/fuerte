@@ -32,7 +32,7 @@ export async function SiteFooter() {
     <footer className="border-t bg-card">
       <div className="container-page grid gap-12 py-16 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:gap-8">
         <div className="max-w-sm">
-          <Link href="/" aria-label={t("header.home")} className="inline-flex min-h-11 items-center gap-3 rounded-lg">
+          <Link href="/" className="inline-flex min-h-11 items-center gap-3 rounded-lg">
             <span aria-hidden className="grid size-8 place-items-center rounded-md bg-primary text-small font-semibold text-primary-foreground">
               ft
             </span>
@@ -42,7 +42,7 @@ export async function SiteFooter() {
           <address className="mt-6 space-y-1 text-small not-italic">
             <p className="text-muted-foreground">{t("common.address")}</p>
             <a href={SITE.phoneHref} className={`${link} gap-2`}>
-              <Phone aria-hidden className="size-4 text-primary" />
+              <Phone aria-hidden className="size-4 text-primary-ink" />
               <span dir="ltr" className="tabular-nums">{SITE.phoneDisplay}</span>
             </a>
             <br />
@@ -52,13 +52,13 @@ export async function SiteFooter() {
               rel="noopener noreferrer"
               className={`${link} gap-2`}
             >
-              <MessageCircle aria-hidden className="size-4 text-primary" />
+              <MessageCircle aria-hidden className="size-4 text-primary-ink" />
               {t("cta.whatsapp")}
             </a>
           </address>
           <Link
             href="/emergency-cyber-response"
-            className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 text-small font-semibold text-primary hover:bg-primary/10"
+            className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 text-small font-semibold text-primary-ink hover:bg-primary/10"
           >
             <ShieldAlert aria-hidden className="size-4 shrink-0" />
             {t("footer.emergency")}
@@ -74,7 +74,7 @@ export async function SiteFooter() {
               </li>
             ))}
             <li>
-              <Link href="/services" className={`${link} font-semibold text-primary`}>{t("nav.allServices")}</Link>
+              <Link href="/services" className={`${link} font-semibold text-primary-ink`}>{t("nav.allServices")}</Link>
             </li>
           </ul>
         </nav>
@@ -127,7 +127,7 @@ export async function SiteFooter() {
             <div>
               <dt className="text-muted-foreground">{t("rfq.emailLabel")}</dt>
               <dd className="mt-1">
-                {SITE.email ? <a href={`mailto:${SITE.email}`} className="hover:text-primary">{SITE.email}</a> : <Placeholder>EMAIL</Placeholder>}
+                {SITE.email ? <a href={`mailto:${SITE.email}`} className="hover:text-primary-ink">{SITE.email}</a> : <Placeholder>EMAIL</Placeholder>}
               </dd>
             </div>
           </dl>

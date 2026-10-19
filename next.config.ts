@@ -1,7 +1,32 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
+// Third parties the site may load: Turnstile, and analytics/ads only after consent (components/consent).
+const TURNSTILE = "https://challenges.cloudflare.com";
+const ANALYTICS = "https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms https://c.bing.com";
+const LINKEDIN = "https://snap.licdn.com https://px.ads.linkedin.com";
+
+// Pages are statically generated, so per-request nonces aren't available: inline scripts are allowed,
+// everything else is an explicit allow-list. Dev mode is left without a CSP (it needs eval).
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${ANALYTICS} ${LINKEDIN}`,
+  "font-src 'self'",
+  `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}`,
+  `frame-src ${TURNSTILE}`,
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(process.env.VERCEL ? ["upgrade-insecure-requests"] : []),
+].join("; ");
+
 const securityHeaders = [
+  ...(process.env.NODE_ENV === "production" ? [{ key: "Content-Security-Policy", value: csp }] : []),
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },

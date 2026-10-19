@@ -12,7 +12,7 @@ type Menu = "services" | "industries";
 
 const top = "inline-flex h-11 items-center gap-1 rounded-lg px-3 text-small font-medium transition-colors hover:bg-muted aria-expanded:bg-muted";
 const item = "block rounded-lg px-3 py-2 text-small leading-snug text-muted-foreground hover:bg-muted hover:text-foreground";
-const more = "inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-small font-semibold text-primary hover:bg-muted";
+const more = "inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-small font-semibold text-primary-ink hover:bg-muted";
 
 /**
  * Disclosure-pattern menus (button + panel), not an ARIA menu: links stay in the normal tab order.
@@ -53,7 +53,7 @@ export function DesktopNav({ nav }: { nav: Nav }) {
       aria-expanded={open === menu}
       aria-controls={`menu-${menu}`}
       onClick={() => setOpen(open === menu ? null : menu)}
-      className={cn(top, active(href) && "text-primary")}
+      className={cn(top, active(href) && "text-primary-ink")}
     >
       {label}
       <ChevronDown aria-hidden className={cn("size-4 text-muted-foreground transition-transform", open === menu && "rotate-180")} />
@@ -82,7 +82,7 @@ export function DesktopNav({ nav }: { nav: Nav }) {
                           href={child.href}
                           onClick={close}
                           aria-current={pathname === child.href ? "page" : undefined}
-                          className={cn(item, pathname === child.href && "text-primary")}
+                          className={cn(item, pathname === child.href && "text-primary-ink")}
                         >
                           {child.label}
                         </Link>
@@ -119,7 +119,7 @@ export function DesktopNav({ nav }: { nav: Nav }) {
                       href={link.href}
                       onClick={close}
                       aria-current={pathname === link.href ? "page" : undefined}
-                      className={cn(item, "text-body", pathname === link.href && "text-primary")}
+                      className={cn(item, "text-body", pathname === link.href && "text-primary-ink")}
                     >
                       {link.label}
                     </Link>
@@ -139,7 +139,7 @@ export function DesktopNav({ nav }: { nav: Nav }) {
             <Link
               href={link.href}
               aria-current={active(link.href) ? "page" : undefined}
-              className={cn(top, active(link.href) && "text-primary")}
+              className={cn(top, active(link.href) && "text-primary-ink")}
             >
               {link.label}
             </Link>

@@ -93,7 +93,7 @@ export function RfqForm() {
     const ref = state.reference;
     return (
       <div role="status" className="rounded-2xl border bg-card p-6 md:p-10">
-        <CheckCircle2 aria-hidden className="size-10 text-primary" />
+        <CheckCircle2 aria-hidden className="size-10 text-primary-ink" />
         <h2 className="mt-6 text-h2">{t("successTitle", { name: state.name })}</h2>
         <p className="mt-4 text-body-lg text-muted-foreground">{t("successBody", { reference: ref, email: state.email })}</p>
         <h3 className="mt-10 text-h4">{t("nextTitle")}</h3>

@@ -8,7 +8,7 @@ export default async function NotFound() {
   const t = await getTranslations("notFound");
   return (
     <main id="main" className="container-page section-y">
-      <p className="eyebrow font-mono text-primary">404</p>
+      <p className="eyebrow font-mono text-primary-ink">404</p>
       <h1 className="mt-3 max-w-3xl text-h1">{t("title")}</h1>
       <p className="mt-6 max-w-prose text-body-lg text-muted-foreground">{t("body")}</p>
       <div className="mt-10 flex flex-col gap-3 sm:flex-row">

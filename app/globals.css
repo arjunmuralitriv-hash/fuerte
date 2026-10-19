@@ -40,6 +40,8 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  /* Red for text and icons: AA (4.5:1) on every surface in both themes. --primary stays the fill colour. */
+  --color-primary-ink: var(--primary-ink);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -130,6 +132,7 @@
   --input: #e4e4e1;
   --ring: #bc1704;
   --glow: #ff4a2e;
+  --primary-ink: #bc1704;
   --chart-1: #bc1704;
   --chart-2: #5b5b61;
   --chart-3: #8a8a90;
@@ -191,6 +194,7 @@
   --input: rgb(255 255 255 / 15%);
   --ring: #e5341d;
   --glow: #ff5a3c;
+  --primary-ink: #f2583f;
   --chart-1: #e5341d;
   --chart-2: #a1a1a9;
   --chart-3: #6e6e76;

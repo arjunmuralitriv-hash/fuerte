@@ -17,12 +17,13 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
       <div className="container-page flex h-16 items-center justify-between gap-4">
-        <Link href="/" aria-label={t("header.home")} className="flex min-h-11 shrink-0 items-center gap-3 rounded-lg">
+        <Link href="/" className="flex min-h-11 shrink-0 items-center gap-3 rounded-lg">
           {/* Placeholder mark until the client supplies the logo SVG. */}
           <span aria-hidden className="grid size-8 place-items-center rounded-md bg-primary text-small font-semibold text-primary-foreground">
             ft
           </span>
-          <span className="hidden text-small font-semibold sm:inline lg:hidden xl:inline">{t("common.companyName")}</span>
+          {/* Link text is the company name (WCAG 2.5.3); visually hidden where space is tight, never removed. */}
+          <span className="sr-only text-small font-semibold sm:not-sr-only lg:sr-only xl:not-sr-only">{t("common.companyName")}</span>
         </Link>
         <DesktopNav nav={nav} />
         <div className="flex items-center gap-1">
