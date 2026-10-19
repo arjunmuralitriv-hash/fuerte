@@ -10,8 +10,14 @@ that section is centred and scrubs the transitions in between.
   5 City       aerial pull-back with network arcs between West Bay's towers; Lusail and The Pearl on the horizon
   6 Settle     calm night, the tower toward the end side, clean sky for the call to action
 
-Run (assets dir, output .blend, optional "--render <dir> <w> <h> <samples> <frames>", frames like "1,140" or "1-528:2"):
-  blender --background --factory-startup --disable-autoexec --python build_film.py -- <assets> <out.blend> [--render ...]
+Run (assets dir, output .blend, optional "--theme light|dark" (default dark) and
+"--render <dir> <w> <h> <samples> <frames>", frames like "1,140" or "1-528:2"):
+  blender --background --factory-startup --disable-autoexec --python build_film.py -- <assets> <out.blend> [--theme ...] [--render ...]
+
+Colour follows the website's design system (design-system/fuerte/MASTER.md, values in app/globals.css): Fuerte red is the
+only accent, including 3D light, so every Fuerte system (scan, fibre, data hall, devices, shield, network) glows in the
+theme's --glow; the rest of the city is lit in neutral warm and cool white, and the sky is graded toward graphite (no
+purple/pink gradients). The light theme gets a dusk film and the dark theme a night film, rendered separately.
 
 The city comes from OpenStreetMap (assets/osm, prepared by prepare_osm.py). Everything else is generated here, so the
 film is reproducible. Units are metres, Z up; Fuerte's tower stands at the origin on a free waterfront plot and the
@@ -39,7 +45,19 @@ FLOORS, FLOOR_H = 66, 4.2
 HALF, CORNER = 22.0, 9.0  # half-width of the rounded-square plate, corner radius
 TAPER, TWIST = 0.84, math.radians(24)  # top scale, total twist base to roof
 CORE = 8.5  # half-width of the service core
-BRAND_RED = (0.74, 0.09, 0.016)
+THEME = ARGS[ARGS.index("--theme") + 1] if "--theme" in ARGS else "dark"
+
+
+def srgb(hex_):
+    """Design-system hex colour (sRGB) to the linear RGB Blender works in."""
+    c = [int(hex_[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+    return tuple(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in c)
+
+
+DARK = THEME == "dark"
+GLOW = srgb("#FF5A3C" if DARK else "#FF4A2E")  # --glow: 3D emissive
+BRAND_RED = srgb("#D0230C" if DARK else "#BC1704")  # --primary
+LED_WARM, LED_COOL = (1.0, 0.8, 0.58), (0.86, 0.92, 1.0)  # neutral architectural LEDs, about 3000 K and 6500 K
 
 # City (prepare_osm.py coordinates: metres from Doha Tower, X east, Y north)
 OSM = ASSETS / "osm"
@@ -47,8 +65,8 @@ SITE = Vector((-400, -460))  # free waterfront plot in West Bay, sea to the sout
 MASK_HALF = 3000  # land_mask.png covers +-3 km around Doha Tower
 SPECIAL = {152651354: "doha_tower", 152653058: "tornado"}
 DH_FLOOR = 18  # the data-hall floor
-HOLO = (0.3, 0.85, 1.0)  # fibre, scan and device light
-SHIELD = (0.45, 0.85, 1.0)
+HOLO = GLOW  # scan, fibre and device light: Fuerte's systems
+SHIELD = GLOW
 SHIELD_R = (200.0, 200.0, 340.0)  # dome radii: clears the plate and the mast
 # Effect timelines as (frame, value) keys.
 FX = {
@@ -58,9 +76,9 @@ FX = {
     "wave": ((318, 0.0), (356, 380.0)),
     "shield": ((316, 0.0), (320, 1.0), (405, 1.0), (440, 0.0)),
     "arcs": ((415, 0.0), (452, 1.0), (495, 1.0), (520, 0.0)),
-    "sky": ((1, 0.14), (380, 0.1), (528, 0.065)),
+    "sky": ((1, 0.07), (380, 0.05), (528, 0.035)) if DARK else ((1, 0.55), (380, 0.44), (528, 0.34)),
 }
-NEON = ((0.12, 0.72, 1.0), (0.55, 0.32, 1.0), (1.0, 0.82, 0.6), (0.95, 0.22, 0.62))  # cyan, violet, warm white, magenta
+NEON = (LED_COOL, LED_WARM, (1.0, 1.0, 1.0), LED_WARM)  # crown and corner LEDs on other towers: neutral whites only
 
 
 # --------------------------------------------------------------------------------------------- scene and helpers
@@ -313,7 +331,10 @@ def world():
     coord = node(nt, "ShaderNodeTexCoord", (-800, 0))
     nt.links.new(coord.outputs["Generated"], mapping.inputs["Vector"])
     nt.links.new(mapping.outputs[0], env.inputs["Vector"])
-    nt.links.new(env.outputs[0], bg.inputs["Color"])
+    grade = node(nt, "ShaderNodeHueSaturation", (-200, 0))
+    grade.inputs["Saturation"].default_value = 0.45 if DARK else 0.55  # graphite, not mauve
+    nt.links.new(env.outputs[0], grade.inputs["Color"])
+    nt.links.new(grade.outputs[0], bg.inputs["Color"])
     keyed(bg.inputs["Strength"], "default_value", FX["sky"])  # late dusk deepening to night over the film
 
 
@@ -419,8 +440,8 @@ def fuerte_tower(col, furniture, people):
         "panel_warm": emission("panel_warm", (1.0, 0.86, 0.68), 9.0),
         "panel_cool": emission("panel_cool", (0.88, 0.94, 1.0), 10.0),
         "panel_dim": emission("panel_dim", (1.0, 0.8, 0.6), 1.6),
-        "red": principled("fuerte_red", BRAND_RED, rough=0.3, metal=0.6, emit=(1.0, 0.12, 0.03), strength=6.0),
-        "beacon": emission("beacon", (1.0, 0.1, 0.05), 80.0),
+        "red": principled("fuerte_red", BRAND_RED, rough=0.3, metal=0.6, emit=GLOW, strength=6.0),
+        "beacon": emission("beacon", GLOW, 80.0),
     }
     for k in ("glass", "spandrel", "mullion", "core"):
         holo(mats[k], FX["scan"])
@@ -697,8 +718,8 @@ def led_lattice(name, height):
     grad.inputs["From Max"].default_value = height
     L(sep.outputs["Z"], grad.inputs["Value"])
     ramp = node(nt, "ShaderNodeValToRGB", (-350, -300))
-    ramp.color_ramp.elements[0].color = (0.32, 0.18, 1.0, 1)
-    ramp.color_ramp.elements[1].color = (1.0, 0.2, 0.62, 1)
+    ramp.color_ramp.elements[0].color = (*LED_COOL, 1)
+    ramp.color_ramp.elements[1].color = (*LED_WARM, 1)
     L(grad.outputs[0], ramp.inputs[0])
     em = node(nt, "ShaderNodeEmission", (350, 0))
     L(ramp.outputs["Color"], em.inputs["Color"])
@@ -1197,6 +1218,11 @@ def keyed(owner, path, keys, interp="BEZIER"):
     bpy.context.preferences.edit.keyframe_new_interpolation_type = "BEZIER"
 
 
+def visible_between(ob, first, last):
+    """Render the object only from frame first to last."""
+    keyed(ob, "hide_render", ((1, True), (first, False), (last + 1, True)), "CONSTANT")
+
+
 def value(nt, keys, interp="BEZIER", loc=(-1600, -800)):
     """Value node driven by keys; returns its output socket."""
     v = node(nt, "ShaderNodeValue", loc)
@@ -1285,7 +1311,7 @@ def holo(mat, scan):
     below = m_(nt, "LESS_THAN", z, h)
     lw = node(nt, "ShaderNodeLayerWeight", (-200, -900))
     lw.inputs["Blend"].default_value = 0.4
-    ghost = glow_over(nt, HOLO, m_(nt, "MULTIPLY_ADD", lw.outputs["Facing"], 1.1, 0.06), 1.0)
+    ghost = glow_over(nt, HOLO, m_(nt, "MULTIPLY_ADD", lw.outputs["Facing"], 0.6, 0.02), 1.0)
     mix = node(nt, "ShaderNodeMixShader", (500, -300))
     nt.links.new(below, mix.inputs[0])
     nt.links.new(src, mix.inputs[1])
@@ -1390,11 +1416,11 @@ def led_wall(name):
     on = m_(nt, "GREATER_THAN", wn.outputs["Value"], 0.45)
     ramp = node(nt, "ShaderNodeValToRGB", (-400, 300))
     els = ramp.color_ramp.elements
-    els[0].color = (0.1, 1.0, 0.35, 1)
+    els[0].color = (*LED_COOL, 1)
     els[1].position = 0.7
-    els[1].color = (0.15, 0.5, 1.0, 1)
+    els[1].color = (*LED_WARM, 1)
     amber = els.new(0.92)
-    amber.color = (1.0, 0.55, 0.08, 1)
+    amber.color = (*GLOW, 1)
     ramp.color_ramp.interpolation = "CONSTANT"
     sc = node(nt, "ShaderNodeSeparateColor", (-600, 300))
     nt.links.new(wn.outputs["Color"], sc.inputs[0])
@@ -1478,7 +1504,7 @@ def data_hall(col, people):
     m, nt, out = new_material("hall_haze")
     vol = node(nt, "ShaderNodeVolumePrincipled")
     vol.inputs["Density"].default_value = 0.018
-    vol.inputs["Color"].default_value = (0.75, 0.88, 1.0, 1)
+    vol.inputs["Color"].default_value = (0.86, 0.88, 0.9, 1)
     nt.links.new(vol.outputs[0], out.inputs["Volume"])
     hz.data.materials.append(m)
     hz.visible_shadow = False
@@ -1501,8 +1527,8 @@ def dashboard(name):
     gap = m_(nt, "LESS_THAN", m_(nt, "FRACT", m_(nt, "MULTIPLY", sep.outputs["X"], 26)), 0.7)
     grid = m_(nt, "LESS_THAN", m_(nt, "FRACT", m_(nt, "MULTIPLY", sep.outputs["Y"], 8)), 0.04)
     ramp = node(nt, "ShaderNodeValToRGB", (-300, 300))
-    ramp.color_ramp.elements[0].color = (0.1, 0.45, 1.0, 1)
-    ramp.color_ramp.elements[1].color = (0.9, 0.12, 0.05, 1)
+    ramp.color_ramp.elements[0].color = (0.55, 0.56, 0.6, 1)
+    ramp.color_ramp.elements[1].color = (*GLOW, 1)
     nt.links.new(sep.outputs["X"], ramp.inputs[0])
     em = node(nt, "ShaderNodeEmission", (200, 0))
     nt.links.new(ramp.outputs["Color"], em.inputs["Color"])
@@ -1523,7 +1549,7 @@ def plaza(col, people):
     obj_from_bmesh("plaza", bm, col, [paving])
 
     metal = principled("gate_metal", (0.6, 0.62, 0.64), rough=0.25, metal=1.0)
-    status = pulse("gate_status", (0.2, 1.0, 0.6), "u", speed=1.5, period=1.2, gate=FX["devices"], base=1.5, peak=6.0, sharp=4.0)
+    status = pulse("gate_status", GLOW, "u", speed=1.5, period=1.2, gate=FX["devices"], base=1.5, peak=6.0, sharp=4.0)
     gates, lamps_ = bmesh.new(), bmesh.new()
     suv = lamps_.loops.layers.uv.new("UVMap")
     for k in range(7):
@@ -1589,8 +1615,9 @@ def plaza(col, people):
         # Network line from the device's foot to the lobby, pulses flowing inward.
         start = base if base is not None else Vector((head.x, head.y, 0))
         strip(lines, start, lobby, 0.28, 0.07, nuv)
-    obj_from_bmesh("sight_cones", cones, col, [cone_m]).visible_shadow = False
-    obj_from_bmesh("device_lines", lines, col, [net]).visible_shadow = False
+    for ob in (obj_from_bmesh("sight_cones", cones, col, [cone_m]), obj_from_bmesh("device_lines", lines, col, [net])):
+        ob.visible_shadow = False
+        visible_between(ob, FX["devices"][0][0], FX["devices"][-1][0])
 
     for k in range(8):
         a = math.radians(-150 + k * 17)
@@ -1625,7 +1652,7 @@ def shield(col):
     me = bpy.data.meshes.new("shield")
     ob = bpy.data.objects.new("shield", me)
     col.objects.link(ob)
-    fill, edge = shield_material("shield_fill", 0.5, True), shield_material("shield_edge", 5.0, False)
+    fill, edge = shield_material("shield_fill", 0.18, True), shield_material("shield_edge", 5.0, False)
     me.materials.append(fill)
     me.materials.append(edge)
     t = bpy.data.node_groups.new("shield_gn", "GeometryNodeTree")
@@ -1670,9 +1697,10 @@ def shield(col):
     L(delete.outputs[0], go.inputs[0])
     ob.modifiers.new("dome", "NODES").node_group = t
     ob.visible_shadow = False
+    visible_between(ob, FX["shield"][0][0], FX["shield"][-1][0])
 
     # Threat streaks: incoming from all sides, each dying in a flash where it meets the dome.
-    streak_m = emission("threat", (1.0, 0.22, 0.06), 24.0)
+    streak_m = emission("threat", (0.78, 0.82, 0.9), 18.0)
     flash_m, nt, out = new_material("impact")
     lw = node(nt, "ShaderNodeLayerWeight", (-400, -300))
     lw.inputs["Blend"].default_value = 0.2
@@ -1744,7 +1772,9 @@ def arcs(col):
                         loop[uvl].uv = (prev_dist if loop.vert in prev_ring else dist, 0)
             prev_ring, prev_dist = ring_, dist
     net = pulse("city_net", HOLO, "u", speed=320, period=260, gate=FX["arcs"], base=0.9, peak=14.0, sharp=8.0)
-    obj_from_bmesh("network_arcs", bm, col, [net]).visible_shadow = False
+    ob = obj_from_bmesh("network_arcs", bm, col, [net])
+    ob.visible_shadow = False
+    visible_between(ob, FX["arcs"][0][0], FX["arcs"][-1][0])
 
 
 def atmosphere(col):
@@ -1763,7 +1793,7 @@ def atmosphere(col):
     nt.nodes.clear()
     vol = node(nt, "ShaderNodeVolumePrincipled")
     vol.inputs["Density"].default_value = 0.00016
-    vol.inputs["Color"].default_value = (0.95, 0.78, 0.62, 1)
+    vol.inputs["Color"].default_value = (0.88, 0.85, 0.82, 1)
     vol.inputs["Anisotropy"].default_value = 0.55
     out = node(nt, "ShaderNodeOutputMaterial", (300, 0))
     nt.links.new(vol.outputs[0], out.inputs["Volume"])
@@ -1786,21 +1816,23 @@ def camera(scene, col):
     track.track_axis, track.up_axis = "TRACK_NEGATIVE_Z", "UP_Y"
     # The data-hall aisle runs along floor DH_FLOOR's local -Y axis, out through the south glass.
     tw = level(DH_FLOOR)[1]
-    aisle = lambda d, dz=0.0: tuple(Matrix.Rotation(tw, 3, "Z") @ Vector((0, -d, 0)) + Vector((0, 0, DH_FLOOR * FLOOR_H + 1.95 + dz)))
+    aisle = lambda d, dz=0.0, x=0.0: tuple(Matrix.Rotation(tw, 3, "Z") @ Vector((x, -d, 0)) + Vector((0, 0, DH_FLOOR * FLOOR_H + 1.95 + dz)))
+    # Composed frames keep the subject toward the end side on desktop, clear of the copy (Fuerte-3D-Film-Plan.md): each aim
+    # sits a little to the start side of the subject.
     shots = (
-        (1, (-60, -1250, 14), (0, 0, 120), 28),  # 0 arrival: wide skyline
+        (1, (-60, -1250, 14), (-330, 0, 120), 28),  # 0 arrival: wide skyline
         (96, (35, -360, 46), (0, 0, 190), 28),
-        (140, (-330, -300, 150), (0, 0, 178), 28),  # 1 spine: three-quarter view of the whole tower
+        (140, (-330, -300, 150), (-80, 89, 178), 28),  # 1 spine: three-quarter view of the whole tower
         (176, (-40, -75, 84), aisle(0, -1.0), 26),
         (196, aisle(34, 0.5), aisle(0), 22),  # lining up with the aisle outside the glass
-        (215, aisle(18.6), aisle(6, -0.4), 20),  # 2 data hall: just inside the containment
-        (238, aisle(15.5), aisle(6, -0.4), 20),
+        (215, aisle(18.6), aisle(6, -0.4, -1.8), 20),  # 2 data hall: just inside the containment
+        (238, aisle(15.5), aisle(6, -0.4, -1.8), 20),
         (254, aisle(36), aisle(0), 22),  # straight back out through the glass, aim level
         (275, (16, -74, 26), (0, -14, 10), 24),  # sweep down outside toward the plaza
-        (295, (24, -50, 3.6), (0, -14, 6.5), 24),  # 3 devices: plaza level, lobby through the glass
-        (320, (30, -58, 4.5), (0, -14, 7), 24),
-        (375, (-260, -560, 150), (0, 0, 175), 28),  # 4 shield: the whole dome
-        (398, (-285, -600, 165), (0, 0, 175), 28),
+        (295, (24, -50, 3.6), (-8, -19.5, 6.5), 24),  # 3 devices: plaza level, lobby through the glass
+        (320, (30, -58, 4.5), (-8, -20, 7), 24),
+        (375, (-260, -560, 150), (-136, 63, 175), 28),  # 4 shield: the whole dome
+        (398, (-285, -600, 165), (-136, 63, 175), 28),
         (460, (-650, -1650, 980), (350, 900, 40), 24),  # 5 city: aerial over the bay, Lusail beyond
         (492, (-600, -1550, 920), (350, 900, 40), 24),
         (528, (-430, -900, 60), (-250, 0, 150), 35),  # 6 settle: tower to the end side, sky for the CTA

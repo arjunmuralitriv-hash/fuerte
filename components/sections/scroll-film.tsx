@@ -1,15 +1,32 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { preload } from "react-dom";
 
 export type FilmFormat = { path: string; ext: string; count: number };
+/** 16:9 for wide screens, 9:16 rendered separately for phones (framed for the copy at the bottom). */
+export type FilmFormats = { landscape: FilmFormat; portrait: FilmFormat };
 export type FilmManifest = {
   /** Frame shown when data-beat section N is centred in the viewport; one entry per beat. */
   beats: number[];
-  /** 16:9 for wide screens, 9:16 rendered separately for phones (framed for the copy at the bottom). */
-  formats: { landscape: FilmFormat; portrait: FilmFormat };
+  /** The scene follows the site theme (design system): a dusk film for light, a night film for dark. */
+  themes: { light: FilmFormats; dark: FilmFormats };
 };
+
+type Theme = keyof FilmManifest["themes"];
+
+/** The theme next-themes has applied (a class on <html>), updated when the visitor switches it. */
+function useSiteTheme(): Theme {
+  return useSyncExternalStore(
+    (onChange) => {
+      const observer = new MutationObserver(onChange);
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+      return () => observer.disconnect();
+    },
+    () => (document.documentElement.classList.contains("dark") ? "dark" : "light"),
+    () => "dark",
+  );
+}
 
 const MAX_DPR = 2;
 const CONCURRENCY = 6;
@@ -31,8 +48,9 @@ function loadOrder(count: number, beats: number[]) {
  */
 export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = useSiteTheme();
   const portrait = typeof window !== "undefined" && innerHeight > innerWidth;
-  const first = manifest.formats[portrait ? "portrait" : "landscape"];
+  const first = manifest.themes[theme][portrait ? "portrait" : "landscape"];
   if (typeof window !== "undefined") preload(frameUrl(first, manifest.beats[0]), { as: "image", fetchPriority: "high" });
 
   useEffect(() => {
@@ -40,7 +58,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const root = document.documentElement;
-    const format = manifest.formats[innerHeight > innerWidth ? "portrait" : "landscape"];
+    const format = manifest.themes[theme][innerHeight > innerWidth ? "portrait" : "landscape"];
     const stills =
       matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
     const frames: (HTMLImageElement | undefined)[] = new Array(format.count);
@@ -141,7 +159,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       removeEventListener("resize", resize);
       delete root.dataset.scene;
     };
-  }, [manifest]);
+  }, [manifest, theme]);
 
   return <canvas ref={canvasRef} aria-hidden className={className ?? "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full"} />;
 }
