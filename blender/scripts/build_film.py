@@ -71,7 +71,7 @@ SPECIAL = {152651354: "doha_tower", 152653058: "tornado"}
 DH_FLOOR = 18  # the data-hall floor
 HOLO = GLOW  # scan, fibre and device light: Fuerte's systems
 SHIELD = GLOW
-SHIELD_R = (200.0, 200.0, 340.0)  # dome radii: clears the plate and the mast
+SHIELD_R, SHIELD_Z = 195.0, 150.0  # a sphere around the tower, centred at mid-height; the ground clips its base
 # Effect timelines as (frame, value) keys.
 FX = {
     "scan": ((100, -5.0), (138, 335.0), (168, 335.0), (198, -5.0)),
@@ -1600,7 +1600,7 @@ def shield_material(name, strength, rim):
 
 
 def shield(col):
-    """Hexagonal energy dome over the tower (Geometry Nodes: dual of an ico-sphere, edges as tubes) and the threat
+    """Hexagonal energy sphere around the tower (Geometry Nodes: dual of an ico-sphere, edges as tubes) and the threat
     streaks it deflects."""
     me = bpy.data.meshes.new("shield")
     ob = bpy.data.objects.new("shield", me)
@@ -1619,7 +1619,8 @@ def shield(col):
     dual = node(t, "GeometryNodeDualMesh", (-600, 0))
     L(ico.outputs["Mesh"], dual.inputs["Mesh"])
     xf = node(t, "GeometryNodeTransform", (-400, 0))
-    xf.inputs["Scale"].default_value = SHIELD_R
+    xf.inputs["Scale"].default_value = (SHIELD_R,) * 3
+    xf.inputs["Translation"].default_value = (0, 0, SHIELD_Z)
     L(dual.outputs[0], xf.inputs["Geometry"])
     sm_fill = node(t, "GeometryNodeSetMaterial", (0, 150))
     sm_fill.inputs["Material"].default_value = fill
@@ -1658,12 +1659,11 @@ def shield(col):
     lw = node(nt, "ShaderNodeLayerWeight", (-400, -300))
     lw.inputs["Blend"].default_value = 0.2
     nt.links.new(glow_over(nt, SHIELD, m_(nt, "MULTIPLY", m_(nt, "SUBTRACT", 1.0, lw.outputs["Facing"]), 4.0), 1.0), out.inputs["Surface"])
-    a, b, c = SHIELD_R
     for k, hit in enumerate((352, 360, 366, 371, 378, 384, 392, 398)):
         az = math.radians(-120 + k * 37 + RNG.uniform(-12, 12))
         el = math.radians(RNG.uniform(18, 55))
         u = Vector((math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el)))
-        surf = u / math.sqrt((u.x / a) ** 2 + (u.y / b) ** 2 + (u.z / c) ** 2)
+        surf = Vector((0, 0, SHIELD_Z)) + u * SHIELD_R
         come = (u + Vector((RNG.uniform(-0.4, 0.4), RNG.uniform(-0.4, 0.4), RNG.uniform(0.0, 0.5)))).normalized()
         bpy.ops.mesh.primitive_cylinder_add(radius=0.7, depth=70, vertices=8)
         s = bpy.context.object
@@ -1786,8 +1786,8 @@ def camera(scene, col):
         (275, (16, -74, 26), (0, -14, 10), o, 24),  # sweep down outside toward the plaza
         (295, (24, -50, 3.6), (0, -14, 6.5), (-8, -5.5, 0), 24),  # 3 devices: plaza level, lobby through the glass
         (320, (30, -58, 4.5), (0, -14, 7), (-8, -6, 0), 24),
-        (375, (-260, -560, 150), (0, 0, 175), (-136, 63, 0), 28),  # 4 shield: the whole dome
-        (398, (-285, -600, 165), (0, 0, 175), (-136, 63, 0), 28),
+        (375, (-300, -650, 165), (0, 0, 165), (-136, 63, 0), 28),  # 4 shield: the whole sphere
+        (398, (-325, -690, 180), (0, 0, 165), (-136, 63, 0), 28),
         (460, (-650, -1650, 980), (350, 900, 40), o, 24),  # 5 city: aerial over the bay, Lusail beyond
         (492, (-600, -1550, 920), (350, 900, 40), o, 24),
         (528, (-430, -900, 60), (0, 0, 150), (-250, 0, 0), 35),  # 6 settle: tower to the end side, sky for the CTA
