@@ -8,7 +8,7 @@ const HERO_MAX_WAIT = 3500;
 
 /**
  * Lets the 3D scene play before the copy appears, then fades the copy in (home page).
- * - waitForScene (hero): shows a beat after the scene's first frame, or after HERO_MAX_WAIT at most.
+ * - waitForScene (hero copy below the headline): shows after the scene's first frame, or after HERO_MAX_WAIT at most.
  * - otherwise (beats): shows a beat after the card is half in view, so the camera move lands first.
  * Reduced motion, no JavaScript and keyboard focus all show the copy at once (CSS in globals.css).
  */

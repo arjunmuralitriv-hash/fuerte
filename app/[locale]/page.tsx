@@ -61,32 +61,32 @@ export default async function HomePage({ params }: Params) {
       {/* The 3D scene is fixed behind the beat sections and reads their data-beat positions (components/three/README.md). */}
       <HomeScene />
 
-      {/* Beat 0. The scene plays first; the copy and its scrim fade in once the first frame is up (Reveal). */}
+      {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero waits for the scene (Reveal). */}
       <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">
-        <Reveal waitForScene>
-          {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
-          />
-          <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
-            <p className="eyebrow flex items-center gap-3 text-muted-foreground">
-              <span aria-hidden className="h-px w-8 bg-primary" />
-              {hero.eyebrow}
-            </p>
-            <h1 id="hero-title" className="mt-4 max-w-4xl text-display">
-              {hero.title}
-            </h1>
+        {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
+        />
+        <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
+          <p className="eyebrow flex items-center gap-3 text-muted-foreground">
+            <span aria-hidden className="h-px w-8 bg-primary" />
+            {hero.eyebrow}
+          </p>
+          <h1 id="hero-title" className="mt-4 max-w-4xl text-display">
+            {hero.title}
+          </h1>
+          <Reveal waitForScene>
             {/* Phones: the sticky CTA bar already offers survey, quote and WhatsApp, so the hero drops its own buttons to leave the scene room. */}
             <Markdown source={hero.body} ctx={ctx} className={cn(lead, "mt-2 max-md:[&_.not-prose]:hidden")} />
             {hero.scrollCue && (
-              <a href="#beat-1" className="mt-8 inline-flex min-h-11 items-center gap-2 self-start text-small font-medium text-muted-foreground hover:text-foreground md:mt-16">
+              <a href="#beat-1" className="mt-8 inline-flex min-h-11 items-center gap-2 text-small font-medium text-muted-foreground hover:text-foreground md:mt-16">
                 <ArrowDown aria-hidden className="size-4 text-primary-ink motion-safe:animate-bounce" />
                 {hero.scrollCue}
               </a>
             )}
-          </div>
-        </Reveal>
+          </Reveal>
+        </div>
       </section>
 
       {/* Beats 1–6: one viewport each, so each layer of the tower is centred while its copy is read. Copy sits on a translucent card for contrast over the scene. */}
