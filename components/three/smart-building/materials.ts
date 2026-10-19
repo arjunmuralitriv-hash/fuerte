@@ -63,6 +63,9 @@ function make(
     fog: true,
   });
   if (opts.side !== undefined) material.side = opts.side;
+  // Transparent double-sided materials otherwise draw back then front faces with two extra
+  // program variants that the up-front compile never sees (a first-use hitch). Glows don't need it.
+  material.forceSinglePass = true;
   if (opts.glow) {
     material.transparent = true;
     material.depthWrite = false;

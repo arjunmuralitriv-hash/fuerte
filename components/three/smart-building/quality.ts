@@ -1,5 +1,7 @@
 import { getGPUTier, type ModelEntry } from "detect-gpu";
 
+import type { MapSize } from "./assets";
+
 export type QualityTier = "desktop" | "mobile" | "low";
 
 /**
@@ -16,6 +18,10 @@ export type Quality = {
   /** Lobby glass with real transmission (an extra opaque pass). */
   transmission: boolean;
   envResolution: number;
+  /** Load the theme's HDRI (≈ 0.9 MB) for lighting and reflections; otherwise Lightformers only. */
+  hdri: boolean;
+  /** Resolution of the downloaded PBR maps (public/textures). */
+  mapSize: MapSize;
   contactShadowResolution: number;
   /** Sides of the tower's floor plate (curtain-wall bays per floor). */
   facets: number;
@@ -48,6 +54,8 @@ const LIGHT: Omit<Quality, "tier" | "dpr" | "antialias"> = {
   post: false,
   transmission: false,
   envResolution: 128,
+  hdri: false,
+  mapSize: "512",
   contactShadowResolution: 256,
   facets: 16,
   floorsPerPanel: 2,
@@ -79,6 +87,8 @@ export const QUALITY: Record<QualityTier, Quality> = {
     antialias: false, // SMAA in the composer instead
     transmission: true,
     envResolution: 256,
+    hdri: true,
+    mapSize: "1k",
     contactShadowResolution: 512,
     facets: 24,
     floorsPerPanel: 1,

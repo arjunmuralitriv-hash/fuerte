@@ -9,6 +9,7 @@ import {
   type Texture,
 } from "three";
 
+import type { SceneMaps } from "./assets";
 import { brushedNormal, cityFacades, concreteNormal } from "./textures";
 
 /**
@@ -176,17 +177,26 @@ export function createCityMaterials(uniforms: CityUniforms) {
 /* Shared building materials                                                                   */
 /* ------------------------------------------------------------------------------------------ */
 
-export function createBuildingMaterials(towerHeight: number, transmission: boolean) {
+/**
+ * Concrete: the ambientCG set when it loaded, else the canvas normal map. Colour and roughness
+ * factors are divided by the maps' measured means (colour 0.72, roughness 0.52) so the surface
+ * keeps its tuned look either way.
+ */
+function concreteParams(maps: SceneMaps | null, colour: string) {
+  return maps
+    ? { ...maps.concrete, color: colour, roughness: 0.88 / 0.52, metalness: 0, normalScale: new Vector2(0.8, 0.8) }
+    : { color: colour, roughness: 0.88, metalness: 0, normalMap: concreteNormal(), normalScale: new Vector2(0.5, 0.5) };
+}
+
+/** Brushed metal: ambientCG Metal009 normal + roughness (mean 0.47) when loaded, else the canvas grain. */
+export function brushedParams(maps: SceneMaps | null, roughness: number) {
+  return maps ? { ...maps.brushed, roughness: roughness / 0.47 } : { normalMap: brushedNormal(), roughness };
+}
+
+export function createBuildingMaterials(towerHeight: number, transmission: boolean, maps: SceneMaps | null) {
   const facade = createFacadeUniforms(towerHeight);
-  const concrete = new MeshStandardMaterial({
-    color: "#8e8b87",
-    roughness: 0.88,
-    metalness: 0,
-    normalMap: concreteNormal(),
-    normalScale: new Vector2(0.5, 0.5),
-  });
-  const darkConcrete = concrete.clone();
-  darkConcrete.color.set("#5b5955");
+  const concrete = new MeshStandardMaterial(concreteParams(maps, maps ? "#c2bfba" : "#8e8b87"));
+  const darkConcrete = new MeshStandardMaterial(concreteParams(maps, maps ? "#7e7b76" : "#5b5955"));
   const glass = withFacade(
     new MeshPhysicalMaterial({
       color: "#1d2630",
@@ -202,18 +212,18 @@ export function createBuildingMaterials(towerHeight: number, transmission: boole
     true,
   );
   const spandrel = withFacade(
-    new MeshStandardMaterial({ color: "#2b2d33", roughness: 0.35, metalness: 0.7, normalMap: brushedNormal() }),
+    new MeshStandardMaterial({ color: "#2b2d33", metalness: 0.7, ...brushedParams(maps, 0.35) }),
     facade,
     false,
   );
   const band = withFacade(new MeshStandardMaterial({ roughness: 0.3, metalness: 0.5 }), facade, false);
   const mullion = withFacade(
-    new MeshStandardMaterial({ color: "#a3a8b0", roughness: 0.28, metalness: 0.95, normalMap: brushedNormal() }),
+    new MeshStandardMaterial({ color: "#a3a8b0", metalness: 0.95, ...brushedParams(maps, 0.28) }),
     facade,
     false,
   );
-  const aluminium = new MeshStandardMaterial({ color: "#b4b9c0", roughness: 0.3, metalness: 0.95, normalMap: brushedNormal() });
-  const darkMetal = new MeshStandardMaterial({ color: "#1e2024", roughness: 0.5, metalness: 0.6, normalMap: brushedNormal() });
+  const aluminium = new MeshStandardMaterial({ color: "#b4b9c0", metalness: 0.95, ...brushedParams(maps, 0.3) });
+  const darkMetal = new MeshStandardMaterial({ color: "#1e2024", metalness: 0.6, ...brushedParams(maps, 0.5) });
   // Lobby glass: real transmission on desktop; a tinted reflective pane elsewhere.
   const lobbyGlass = new MeshPhysicalMaterial(
     transmission
@@ -226,9 +236,9 @@ export function createBuildingMaterials(towerHeight: number, transmission: boole
 export type BuildingMaterials = ReturnType<typeof createBuildingMaterials>;
 
 /** Equipment: powder-coated rack steel, white device plastic, smoked camera domes. */
-export function createEquipmentMaterials() {
+export function createEquipmentMaterials(maps: SceneMaps | null) {
   return {
-    rackSteel: new MeshStandardMaterial({ color: "#16171a", roughness: 0.55, metalness: 0.45, normalMap: brushedNormal() }),
+    rackSteel: new MeshStandardMaterial({ color: "#16171a", metalness: 0.45, ...brushedParams(maps, 0.55) }),
     whitePlastic: new MeshStandardMaterial({ color: "#e9e9e6", roughness: 0.42, metalness: 0 }),
     greyPlastic: new MeshStandardMaterial({ color: "#7b7f86", roughness: 0.5, metalness: 0.1 }),
     blackPlastic: new MeshStandardMaterial({ color: "#121316", roughness: 0.38, metalness: 0.05 }),
@@ -251,6 +261,7 @@ export function createEquipmentMaterials() {
       opacity: 0.22,
       side: DoubleSide,
       depthWrite: false,
+      forceSinglePass: true,
       envMapIntensity: 1.5,
     }),
     fibreYellow: new MeshStandardMaterial({ color: "#e7b416", roughness: 0.45, metalness: 0 }),

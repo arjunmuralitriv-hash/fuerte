@@ -23,6 +23,7 @@ import {
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
+import type { SceneMaps } from "./assets";
 import { useScene } from "./context";
 import { disposeMeshes, instanced, place } from "./instancing";
 import { applyGlowBlending, createFlowMaterial } from "./materials";
@@ -67,9 +68,9 @@ const BREAKS = [14, 27, TOWER.hallFloor, UPPER_FLOOR, TOWER.floors];
 type Lists = { m: Matrix4[]; seed: number[] };
 const lists = (): { lower: Lists; upper: Lists } => ({ lower: { m: [], seed: [] }, upper: { m: [], seed: [] } });
 
-function createMaterials(quality: Quality) {
+function createMaterials(quality: Quality, maps: SceneMaps | null) {
   return {
-    ...createBuildingMaterials(TOWER_TOP, quality.transmission),
+    ...createBuildingMaterials(TOWER_TOP, quality.transmission, maps),
     crownGlass: new MeshPhysicalMaterial({ color: "#1b232c", roughness: 0.08, metalness: 0.3, clearcoat: 0.5, envMapIntensity: 1.6 }),
     patchFront: new MeshStandardMaterial({ map: patchPanel(), roughness: 0.5, metalness: 0.3 }),
     beacon: new MeshBasicMaterial({ toneMapped: false }),
@@ -78,6 +79,21 @@ function createMaterials(quality: Quality) {
   };
 }
 type TowerMaterials = ReturnType<typeof createMaterials>;
+
+/**
+ * The core is a unit-height box stretched to the tower's height each frame; its side UVs are
+ * pre-scaled by that height so the concrete texture keeps square texels instead of streaking.
+ */
+function coreGeometry() {
+  const width = TOWER.coreHalf * 2;
+  const geo = new BoxGeometry(width, 1, width).translate(0, 0.5, 0);
+  const uv = geo.attributes.uv;
+  const normal = geo.attributes.normal;
+  for (let i = 0; i < uv.count; i++) {
+    if (Math.abs(normal.getY(i)) < 0.5) uv.setY(i, uv.getY(i) * (TOWER_TOP / width));
+  }
+  return geo;
+}
 
 function buildTower(quality: Quality, m: TowerMaterials) {
   const rand = random(11);
@@ -300,7 +316,7 @@ function buildTower(quality: Quality, m: TowerMaterials) {
     traysUpper: instanced(trayGeo, m.aluminium, trays.upper.m),
     branchLower: new Mesh(branchLower ?? new BoxGeometry(0, 0, 0), m.branch),
     branchUpper: new Mesh(branchUpper ?? new BoxGeometry(0, 0, 0), m.branch),
-    core: new Mesh(new BoxGeometry(TOWER.coreHalf * 2, 1, TOWER.coreHalf * 2).translate(0, 0.5, 0), m.concrete),
+    core: new Mesh(coreGeometry(), m.concrete),
     plinth: new Mesh(new CylinderGeometry(2.45, 2.5, 0.06, 48).translate(0, 0.03, 0), m.darkConcrete),
     lobbyFloor: new Mesh(new CylinderGeometry(PODIUM_RADIUS - 0.02, PODIUM_RADIUS - 0.02, 0.02, 48).translate(0, 0.07, 0), m.lobbyInterior),
     lobbyGlass: new Mesh(new CylinderGeometry(PODIUM_RADIUS, PODIUM_RADIUS, 0.62, 48, 1, true).translate(0, 0.37, 0), m.lobbyGlass),
@@ -330,8 +346,8 @@ function buildTower(quality: Quality, m: TowerMaterials) {
 
 /** The tower: structure, curtain wall, crown and podium, and the fibre riser revealed at beat 1. */
 export function Tower() {
-  const { state, quality, palette } = useScene();
-  const materials = useMemo(() => createMaterials(quality), [quality]);
+  const { state, quality, palette, maps } = useScene();
+  const materials = useMemo(() => createMaterials(quality, maps), [quality, maps]);
   const meshes = useMemo(() => buildTower(quality, materials), [quality, materials]);
   const lifted = useRef<Group>(null);
   const fibre = useRef<(Group | null)[]>([]);

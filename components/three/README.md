@@ -65,7 +65,7 @@ The page renders seven sections, in any markup:
 
 ## What is modelled
 
-Everything is procedural: no model or image files.
+All geometry is procedural (no model files). Lighting and the main surfaces use downloaded CC0 assets (see "Assets and credits"); everything else is generated in the browser.
 
 - **Textures** are drawn on canvas or generated as noise at start-up (`smart-building/textures.ts`):
   - server faces with 1U/2U bezels and drive bays
@@ -74,7 +74,7 @@ Everything is procedural: no model or image files.
   - cooler and UPS fronts
   - patch panels
   - city facades and lit-window sheets
-  - concrete and brushed-metal normal maps
+  - concrete and brushed-metal normal maps, used only if the downloaded maps fail to load
 - **Tower:**
   - three setbacks, each a 24-sided curtain wall: glass panes over aluminium spandrels, continuous mullions
   - slabs, a concrete core and perimeter columns
@@ -102,7 +102,8 @@ Everything is procedural: no model or image files.
   - four West Bay landmark towers
   - network arcs
 - **Lighting:**
-  - a drei `<Environment>` built from Lightformers (no HDRI file): night and dusk sets
+  - desktop: the theme's Poly Haven HDRI (night or dusk) via drei's `EnvironmentPortal`, plus one red Lightformer strip so glass and metal keep a brand-red edge
+  - mobile/low, and while an HDRI loads: an environment built from Lightformers, night and dusk sets
   - a moon or sun key light
   - a narrow red rim spotlight on the tower
   - contact shadows
@@ -124,7 +125,8 @@ Everything is procedural: no model or image files.
 - **No mid-scroll hitches:** before the first frame, `Ready`:
   - compiles every program, including layers that start hidden, against a half-float target like the composer's
   - uploads every texture
-- **Start-up:** the preloader covers about 2 s on desktop: geometry build plus shader compile.
+- **Start-up:** the preloader covers the downloads, geometry build and shader compile; about 2 s on desktop from a warm cache. Its percentage counts the GPU check, each texture, the HDRI, the build and the compile.
+- **Preloader position:** centred from md up; on phones it is small and faint in the bottom-end corner, above the mobile CTA bar (4.75rem + safe area), clear of the hero text.
 - **Adaptive resolution:**
   - **How it measures:** it only uses frames rendered back to back while the beat is moving. The throttled idle redraws are ignored.
   - **Stepping down:** if the median over about 45 frames misses the profile's target (55 fps on desktop, 30 fps on mobile and low), the pixel ratio drops 15%, but never below 1.
@@ -139,28 +141,59 @@ Everything is procedural: no model or image files.
 - **Fallback:** `SceneFallback` renders instead of the canvas for reduced motion, no WebGL, a blocklisted GPU (tier 0) or Save-Data. It is static SVG built from tokens and is server-safe.
 - **Theme:** colours come from `--primary`, `--glow` and `--background`, read again whenever next-themes' `resolvedTheme` changes. Fog, sky, bloom and emissive strength all follow the theme.
 
+## Assets and credits
+
+All downloaded assets are **CC0** (public domain). No attribution is required; this is the record. Sources were downloaded on 19 Oct 2026 and converted locally; only the outputs below are in the repo.
+
+| File(s) | Asset | Source | Licence | Shipped size |
+|---|---|---|---|---|
+| `public/env/night.hdr` | Rooftop Night (HDRI), 768 × 384 Radiance, RLE | https://polyhaven.com/a/rooftop_night | CC0 | 910 KB |
+| `public/env/dusk.hdr` | Qwantani Dusk 2 (HDRI), 768 × 384 Radiance, RLE | https://polyhaven.com/a/qwantani_dusk_2 | CC0 | 880 KB |
+| `public/textures/concrete-{color,normal,roughness}-{1k,512}.webp` | Concrete 034 (PBR set) | https://ambientcg.com/a/Concrete034 | CC0 | 1k: 166 KB · 512: 65 KB |
+| `public/textures/brushed-{normal,roughness}-{1k,512}.webp` | Metal 009, brushed steel (PBR set) | https://ambientcg.com/a/Metal009 | CC0 | 1k: 82 KB · 512: 16 KB |
+
+**What loads where (bytes over the wire, measured)**
+
+| Profile | Downloads | Total |
+|---|---|---|
+| Desktop | the current theme's HDRI + five 1k maps | **1.16 MB** (the other theme's HDRI, 0.88 MB, loads only after a theme switch: 2.04 MB at most) |
+| Mobile / low | five 512 px maps, no HDRI | **81 KB** |
+
+Budget (plan section 10): desktop < 3 MB, mobile < 1.5 MB. The assets load only with the lazy scene chunk, so initial JS is unchanged.
+
+**How they were made**
+- **HDRIs:** box-downsampled 1024 → 768 px in linear float with three's `HDRLoader`, then re-encoded as RLE Radiance.
+- **Maps:** resized with `sharp` (already in `node_modules`, part of Next) and encoded as WebP:
+  - normals at q88, roughness (greyscale) q72, colour q78
+  - KTX2 was not used: it would also need the Basis transcoder (about 0.5 MB of wasm) over the wire.
+- **Also approved, but not used:**
+  - **Painted Metal 004** (downloaded): it is chipped, scratched red paint, wrong for a premium tower.
+  - **Sheet Metal 001 and Facade 006** (not downloaded): the canvas perforation and city facades are built to line up with the rack doors and the lit-window mapping, which these sheets would not.
+
 ## Measured (19 Oct 2026)
 
-Dev page `?stats=1`, a scripted scrub from beat 0 to 6 and back (6 s each way), dark theme. GPU time comes from `EXT_disjoint_timer_query_webgl2`.
+Dev page `?stats=1`, a scripted scrub from beat 0 to 6 and back (6 s each way), dark theme, **with the downloaded HDRI and PBR maps**. GPU time comes from `EXT_disjoint_timer_query_webgl2`.
 
 **Test machine:** RTX 4050 Laptop GPU on a 166 Hz display. This is faster than the plan's "mid-range laptop" and far faster than a mid-range Android phone, so these numbers show headroom, not proof for those devices.
 
 | | Desktop, 1440×900, DPR 1.25 | Mobile profile, 375×812, DPR 1.5 |
 |---|---|---|
-| Frame rate | 165 fps (display-bound) | 135 fps |
-| Frame time p50 / p95 | 6.1 / 6.6 ms | 6.1 / 6.5 ms |
-| CPU per frame p50 / p95 | 1.2 / 1.7 ms | 0.6 / 0.9 ms |
-| GPU per frame p50 / p95 | 4.9 / 5.8 ms | 2.7 / 4.3 ms |
+| Frame rate | 165 fps (display-bound) | 145 fps |
+| Frame time p50 / p95 | 6.1 / 6.7 ms | 6.1 / 6.5 ms |
+| CPU per frame p50 / p95 | 1.4 / 2.0 ms | 0.6 / 0.9 ms |
+| GPU per frame p50 / p95 | 4.9 / 5.8 ms | 2.1 / 3.9 ms |
+| 3D assets downloaded | 1.16 MB | 81 KB |
 | Triangles built (all layers) | 136k | 39.5k |
 | Triangles drawn, peak frame | 283k (transmission pre-pass draws the opaque scene twice) | 35k |
 | Draw calls, peak | 246 | 86 |
 
 **First scrub after load**
-- One 37 ms CPU frame on desktop and one 29 ms frame on mobile; every later frame is under 4 ms.
+- At most one 30–45 ms CPU frame; every later frame is under 4 ms.
 - Before the pre-compile and texture-upload fix, the first visit to beat 3 cost about 390 ms.
+- Transparent double-sided materials now draw in a single pass (`forceSinglePass`), so they need no extra shader variants on first use.
 
 **Mobile run**
-- The run includes a 1.6 s gap with no frames at the very bottom of the page. That is the intended pause when no `data-beat` section is on screen.
+- The run includes a gap of 0.9–1.6 s with no frames once the footer is reached. That is the intended pause when no `data-beat` section is on screen.
 
 **Not measured here**
 - **Mid-range Android:** the plan's ≥30 fps target. Check it on a real phone with `?stats=1`.
@@ -169,8 +202,7 @@ Dev page `?stats=1`, a scripted scrub from beat 0 to 6 and back (6 s each way), 
 
 ## Swapping in a Blender glTF or real assets later
 
-`ASSET-PROPOSAL.md` lists free CC0 and CC-BY HDRIs, texture sets and models, with sizes and compression targets. Nothing there is downloaded yet.
-
+`ASSET-PROPOSAL.md` lists the free assets that were considered. The CC0 HDRIs and textures are now in use (see "Assets and credits"). The CC-BY models were not approved and are not in the repo.
 
 1. In Blender, keep collections named `facade`, `fibre`, `racks`, `elv_devices`, `shield` and `city`. Keep the whole model under 150k triangles; the mobile LOD should be about 40k.
 2. Compress the model:

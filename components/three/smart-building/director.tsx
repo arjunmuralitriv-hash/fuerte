@@ -148,7 +148,7 @@ export function Director() {
 
     // Wide screens: shift the frame so the tower sits on the end side, clear of the text column.
     const end = document.documentElement.dir === "rtl" ? 1 : -1;
-    const film = camera.aspect > 1.2 ? end * Math.min(7, (camera.aspect - 1.2) * 12) : 0;
+    const film = camera.aspect > 1.1 ? end * Math.min(11, (camera.aspect - 1.1) * 20) : 0;
     if (camera.filmOffset !== film) {
       camera.filmOffset = film;
       camera.updateProjectionMatrix();

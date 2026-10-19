@@ -3,10 +3,11 @@
 import { Canvas } from "@react-three/fiber";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { NeutralToneMapping, NoToneMapping } from "three";
+import { NeutralToneMapping, NoToneMapping, type Texture } from "three";
 
 import { SceneFallback } from "@/components/three/scene-fallback";
 import { ScenePreloader } from "@/components/three/scene-preloader";
+import { loadEnvironment, loadMaps, type SceneMaps } from "@/components/three/smart-building/assets";
 import { City } from "@/components/three/smart-building/city";
 import { SceneContext, type SceneState } from "@/components/three/smart-building/context";
 import { DataHall } from "@/components/three/smart-building/data-hall";
@@ -25,6 +26,8 @@ import {
 import { Shield } from "@/components/three/smart-building/shield";
 import { Tower } from "@/components/three/smart-building/tower";
 import { cn } from "@/lib/utils";
+
+type Theme = "dark" | "light";
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const subscribeReducedMotion = (onChange: () => void) => {
@@ -54,6 +57,9 @@ export default function SmartBuildingScene({ className, quality: forced, stats }
   );
   /** undefined while detecting, null when the static fallback should show. */
   const [quality, setQuality] = useState<Quality | null>();
+  const [maps, setMaps] = useState<SceneMaps | null>(null);
+  /** HDRIs by theme: undefined until requested, null if unavailable. Each loads at most once. */
+  const [environments, setEnvironments] = useState<Partial<Record<Theme, Texture | null>>>({});
   const [palette, setPalette] = useState<Palette>();
   const [ready, setReady] = useState(false);
   const [state] = useState<SceneState>(() => ({ target: 0, beat: 0, active: true }));
@@ -67,7 +73,21 @@ export default function SmartBuildingScene({ className, quality: forced, stats }
       const picked = !hasWebGL() ? null : forced ? QUALITY[forced] : await detectQuality();
       if (cancelled) return;
       endLoading("gpu");
-      if (!picked) endAllLoading();
+      if (!picked) {
+        endAllLoading();
+        setQuality(null);
+        return;
+      }
+      // Downloaded maps and the current theme's HDRI load before the canvas mounts, so the first
+      // frame is already final; both count towards the preloader's percentage.
+      const theme: Theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+      const [loadedMaps, environment] = await Promise.all([
+        loadMaps(picked.mapSize),
+        picked.hdri ? loadEnvironment(theme) : Promise.resolve(null),
+      ]);
+      if (cancelled) return;
+      setMaps(loadedMaps);
+      if (picked.hdri) setEnvironments((e) => ({ ...e, [theme]: environment }));
       setQuality(picked);
     })();
     return () => {
@@ -86,9 +106,23 @@ export default function SmartBuildingScene({ className, quality: forced, stats }
     return () => cancelAnimationFrame(id);
   }, [resolvedTheme]);
 
+  // After a theme switch, fetch that theme's HDRI once; the Lightformers light the scene meanwhile.
+  const theme: Theme | undefined = palette ? (palette.dark ? "dark" : "light") : undefined;
+  useEffect(() => {
+    if (!quality?.hdri || !theme || theme in environments) return;
+    let cancelled = false;
+    loadEnvironment(theme).then((t) => {
+      if (!cancelled) setEnvironments((e) => ({ ...e, [theme]: t }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [quality, theme, environments]);
+
+  const environment = theme ? (environments[theme] ?? null) : null;
   const context = useMemo(
-    () => (quality && palette ? { state, quality, palette } : null),
-    [state, quality, palette],
+    () => (quality && palette ? { state, quality, palette, maps, environment } : null),
+    [state, quality, palette, maps, environment],
   );
   const onReady = useCallback(() => setReady(true), []);
 

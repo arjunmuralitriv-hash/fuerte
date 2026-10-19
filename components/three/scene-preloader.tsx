@@ -6,10 +6,16 @@ import { useEffect, useState } from "react";
 import { Loader } from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 
-/** Centred `working · gyro` orb with the scene's load percentage; fades out once the first frame is drawn. */
+/**
+ * `working · gyro` orb with the scene's load percentage; fades out once the first frame is drawn.
+ * Phones: small and faint in the bottom-end corner, above the mobile CTA bar (4.75rem + safe area),
+ * clear of the hero text. From md up: centred.
+ */
 export function ScenePreloader({ ready }: { ready: boolean }) {
   const progress = useProgress((s) => s.progress);
   const [gone, setGone] = useState(false);
+  // Read once: the scene (and so this preloader) only mounts client-side.
+  const [isPhone] = useState(() => !window.matchMedia("(min-width: 48rem)").matches);
 
   useEffect(() => {
     if (!ready) return;
@@ -21,12 +27,13 @@ export function ScenePreloader({ ready }: { ready: boolean }) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 grid place-items-center transition-opacity duration-500",
-        ready && "opacity-0",
+        "pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] flex justify-end px-4 opacity-70 transition-opacity duration-500",
+        "md:inset-0 md:items-center md:justify-center md:px-0 md:opacity-100",
+        ready && "opacity-0 md:opacity-0",
       )}
     >
-      <div className="flex flex-col items-center gap-3">
-        <Loader state="working" variant="gyro" size={48} paused={ready} />
+      <div className="flex items-center gap-2 md:flex-col md:gap-3">
+        <Loader state="working" variant="gyro" size={isPhone ? 32 : 48} paused={ready} />
         <span aria-hidden className="font-mono text-small text-muted-foreground tabular-nums">
           {Math.round(progress)}%
         </span>

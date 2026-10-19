@@ -1,4 +1,10 @@
-# Part B: free assets for the last step of realism (proposal, nothing downloaded)
+# Part B: free assets for the last step of realism
+
+> **Status (19 Oct 2026):** the user approved the CC0 HDRIs and ambientCG sets below.
+> - **In use:** Rooftop Night, Qwantani Dusk 2, Concrete 034 and Metal 009 are compressed and wired in; see README, "Assets and credits", for files, sizes and credits.
+> - **Approved but not used:** Painted Metal 004, Sheet Metal 001, Facade 006 and Plastic 010.
+> - **Not approved:** the CC-BY models; nothing from them was downloaded.
+> The text below is the original proposal.
 
 None of these are in the repo. Each download needs the user's explicit approval.
 

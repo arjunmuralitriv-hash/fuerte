@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import type { Texture } from "three";
 
+import type { SceneMaps } from "./assets";
 import type { Palette } from "./palette";
 import type { Quality } from "./quality";
 
@@ -15,7 +17,15 @@ export type SceneState = {
   active: boolean;
 };
 
-export type SceneContextValue = { state: SceneState; quality: Quality; palette: Palette };
+export type SceneContextValue = {
+  state: SceneState;
+  quality: Quality;
+  palette: Palette;
+  /** Downloaded PBR maps, or null to use the canvas fallbacks. */
+  maps: SceneMaps | null;
+  /** The current theme's HDRI (equirect), or null while loading / on the light profiles. */
+  environment: Texture | null;
+};
 
 export const SceneContext = createContext<SceneContextValue | null>(null);
 

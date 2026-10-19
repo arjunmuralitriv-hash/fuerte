@@ -1,6 +1,6 @@
 "use client";
 
-import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
+import { ContactShadows, Environment, EnvironmentPortal, Lightformer } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import {
@@ -23,13 +23,28 @@ import { random } from "./math";
 import { layerWeights } from "./timeline";
 
 /**
- * Image-based lighting without an HDRI file: a few Lightformers rendered once into a cube map.
+ * Image-based lighting. Desktop: the theme's Poly Haven HDRI (night: Rooftop Night, dusk: Qwantani
+ * Dusk 2) rendered once into a cube map, with the brand's red rim strip added on top so glass and
+ * metal still catch a red edge. Mobile/low, or until the HDRI arrives: Lightformers only.
  * Night: a moonlit sky band, warm city glow on the horizon, a red rim strip behind the tower.
  * Dusk: a low warm sunset, a pale sky dome, the same red rim at lower strength.
  */
 function Lighting() {
-  const { quality, palette } = useScene();
+  const { quality, palette, environment } = useScene();
   const red = `#${palette.primary.getHexString()}`;
+  if (environment) {
+    return (
+      <EnvironmentPortal
+        key={palette.dark ? "night-hdri" : "dusk-hdri"}
+        map={environment}
+        resolution={quality.envResolution}
+        frames={1}
+        environmentIntensity={palette.dark ? 0.4 : 0.9}
+      >
+        <Lightformer form="rect" intensity={palette.dark ? 1.2 : 2} color={red} scale={[2, 16, 1]} position={[22, 7, -14]} target={[0, 7, 0]} />
+      </EnvironmentPortal>
+    );
+  }
   return palette.dark ? (
     <Environment key="night" resolution={quality.envResolution} frames={1} environmentIntensity={0.75}>
       <color attach="background" args={["#06070a"]} />

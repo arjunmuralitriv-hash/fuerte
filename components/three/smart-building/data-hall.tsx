@@ -21,9 +21,10 @@ import { useScene } from "./context";
 import { disposeMeshes, instanced, place } from "./instancing";
 import { createLedMaterial } from "./materials";
 import { random } from "./math";
-import { createEquipmentMaterials, disposeMaterials } from "./pbr";
+import { brushedParams, createEquipmentMaterials, disposeMaterials } from "./pbr";
 import type { Quality } from "./quality";
-import { brushedNormal, cabinetFaces, floorTiles, ladderTray, perforation, serverFaces } from "./textures";
+import type { SceneMaps } from "./assets";
+import { cabinetFaces, floorTiles, ladderTray, perforation, serverFaces } from "./textures";
 import { layerWeights } from "./timeline";
 import { TOWER, floorY, radiusAt } from "./tower";
 
@@ -40,12 +41,12 @@ const LED_COLOURS = [
   [1, 0.12, 0.08],
 ];
 
-function createMaterials() {
+function createMaterials(maps: SceneMaps | null) {
   const faces = serverFaces();
   const { cooler, ups } = cabinetFaces();
   const tiles = floorTiles();
   const perf = perforation();
-  const eq = createEquipmentMaterials();
+  const eq = createEquipmentMaterials(maps);
   const faceMaterial = (map: (typeof faces)[number]) =>
     new MeshStandardMaterial({ map: map.map, normalMap: map.normal, roughness: 0.45, metalness: 0.4 });
   const perforatedDoor = new MeshStandardMaterial({
@@ -79,7 +80,7 @@ function createMaterials() {
     faces: faces.map(faceMaterial),
     cooler: new MeshStandardMaterial({ map: cooler.map, normalMap: cooler.normal, roughness: 0.5, metalness: 0.2 }),
     ups: new MeshStandardMaterial({ map: ups.map, normalMap: ups.normal, emissiveMap: ups.emissive, emissive: new Color(2, 2, 2), roughness: 0.5, metalness: 0.3 }),
-    coolerBody: new MeshStandardMaterial({ color: "#d3d6db", roughness: 0.45, metalness: 0.2, normalMap: brushedNormal() }),
+    coolerBody: new MeshStandardMaterial({ color: "#d3d6db", metalness: 0.2, ...brushedParams(maps, 0.45) }),
     perforatedDoor,
     floor,
     perfTiles,
@@ -191,8 +192,8 @@ function buildHall(quality: Quality, m: HallMaterials) {
 
 /** The opened data-hall floor (beat 2): raised floor, contained rack rows, cooling, UPS, overhead trays. */
 export function DataHall() {
-  const { state, quality } = useScene();
-  const materials = useMemo(createMaterials, []);
+  const { state, quality, maps } = useScene();
+  const materials = useMemo(() => createMaterials(maps), [maps]);
   const meshes = useMemo(() => buildHall(quality, materials), [quality, materials]);
   const group = useRef<Group>(null);
   const work = useRef<PointLight>(null);

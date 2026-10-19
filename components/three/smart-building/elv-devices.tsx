@@ -23,6 +23,7 @@ import { aim, disposeMeshes, instanced, place } from "./instancing";
 import { applyGlowBlending, createConeMaterial, createLedMaterial, createRippleMaterial } from "./materials";
 import { random } from "./math";
 import { accessPoint, bmsSensor, bulletCamera, cardReader, ceilingSpeaker, domeCamera, hornSpeaker } from "./models";
+import type { SceneMaps } from "./assets";
 import { createEquipmentMaterials, disposeMaterials, withReveal } from "./pbr";
 import type { Quality } from "./quality";
 import { speakerGrille } from "./textures";
@@ -45,8 +46,8 @@ function aimAngles(from: Vector3, to: Vector3) {
   return { yaw: Math.atan2(d.x, d.z), pitch: Math.asin(-d.y / d.length()) };
 }
 
-function createMaterials() {
-  const eq = createEquipmentMaterials();
+function createMaterials(maps: SceneMaps | null) {
+  const eq = createEquipmentMaterials(maps);
   const uReveal = { value: 0 };
   const reveal = <M extends MeshStandardMaterial>(m: M) => withReveal(m, uReveal);
   const grille = new MeshStandardMaterial({ color: "#d9d9d6", roughness: 0.6, normalMap: speakerGrille(), normalScale: new Vector2(0.8, 0.8) });
@@ -218,8 +219,8 @@ function buildDevices(quality: Quality, mat: DeviceMaterials) {
 
 /** CCTV (dome and bullet) with sight-line cones, card readers, Wi-Fi APs, PA and BMS devices (beat 3). */
 export function ElvDevices() {
-  const { state, quality, palette } = useScene();
-  const materials = useMemo(createMaterials, []);
+  const { state, quality, palette, maps } = useScene();
+  const materials = useMemo(() => createMaterials(maps), [maps]);
   const meshes = useMemo(() => buildDevices(quality, materials), [quality, materials]);
   const group = useRef<Group>(null);
 
