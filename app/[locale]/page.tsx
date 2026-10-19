@@ -5,6 +5,7 @@ import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { Markdown, Placeholder } from "@/components/content/markdown";
+import { HomeScene } from "@/components/sections/home-scene";
 import { Link } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
 import { getSectionPages, hasPlaceholder } from "@/lib/content";
@@ -55,14 +56,16 @@ export default async function HomePage({ params }: Params) {
 
   return (
     <main id="main" lang={home.contentLocale} dir={home.contentLocale === "ar" ? "rtl" : "ltr"}>
-      {/* Beat 0. The H1 is the LCP element; the 3D scene mounts behind these sections after first paint. */}
-      <section data-beat="0" aria-labelledby="hero-title" className="relative isolate overflow-hidden border-b">
+      {/* The 3D scene is fixed behind the beat sections and reads their data-beat positions (components/three/README.md). */}
+      <HomeScene />
+
+      {/* Beat 0. The H1 is the LCP element; the canvas appears behind it after first paint. */}
+      <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">
+        {/* Scrim on the text side keeps the copy readable over the lit tower; the scene keeps the other side. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 end-0 -z-10 hidden w-1/2 bg-blueprint [clip-path:polygon(30%_0,100%_0,100%_100%,0_100%)] md:block rtl:[clip-path:polygon(0_0,70%_0,100%_100%,0_100%)]"
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent" />
-        </div>
+          className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-r from-background/90 via-background/75 to-background/30 md:via-background/60 md:to-transparent rtl:bg-linear-to-l"
+        />
         <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-center py-16 md:py-24">
           <p className="eyebrow flex items-center gap-3 text-muted-foreground">
             <span aria-hidden className="h-px w-8 bg-primary" />
@@ -81,125 +84,115 @@ export default async function HomePage({ params }: Params) {
         </div>
       </section>
 
-      {/* Beats 1–6: text sits in the start column; the end column is the 3D stage (a blueprint poster until it loads). */}
+      {/* Beats 1–6: one viewport each, so each layer of the tower is centred while its copy is read. Copy sits on a translucent card for contrast over the scene. */}
       {beats.map((beat, i) => {
         const n = i + 1;
-        const isProof = n === 5;
-        const isCta = n === 6;
+        const proof = n === 5 ? stats.filter((s) => showClaim(s.value)) : [];
         return (
-          <section
-            key={n}
-            id={`beat-${n}`}
-            data-beat={n}
-            aria-labelledby={`beat-${n}-title`}
-            className={cn("scroll-mt-16 border-b", isCta && "bg-card")}
-          >
-            <div className="container-page grid items-center gap-10 section-y lg:min-h-[80dvh] lg:grid-cols-2 lg:gap-16">
-              <div className="max-w-xl">
+          <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
+            <div className="container-page flex min-h-dvh items-center py-16">
+              <div className="w-full max-w-xl rounded-3xl border bg-background/80 p-6 backdrop-blur-md md:p-8 dark:bg-background/70">
                 <p className="eyebrow font-mono text-primary">{beat.eyebrow}</p>
                 <h2 id={`beat-${n}-title`} className="mt-3 text-h2">
                   {beat.title}
                 </h2>
                 <Markdown source={beat.body} ctx={ctx} className={lead} />
+                {proof.length > 0 && (
+                  <dl className="mt-8 grid grid-cols-2 gap-3">
+                    {proof.map((s) => (
+                      <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end gap-1 rounded-2xl border bg-card p-4">
+                        <dt className="text-small text-muted-foreground">{s.label}</dt>
+                        <dd className="text-h3 font-semibold tabular-nums">
+                          <Value text={s.value} />
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
               </div>
-              {isProof && stats.some((s) => showClaim(s.value)) ? (
-                <dl className="grid grid-cols-2 gap-4">
-                  {stats.filter((s) => showClaim(s.value)).map((s) => (
-                    <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end gap-2 rounded-2xl border bg-card p-5 elevation-1 md:p-6">
-                      <dt className="text-small text-muted-foreground">{s.label}</dt>
-                      <dd className="text-h2 font-semibold tabular-nums">
-                        <Value text={s.value} />
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <div aria-hidden className="relative hidden aspect-4/3 overflow-hidden rounded-3xl border bg-blueprint lg:block">
-                  <span className="absolute end-6 bottom-4 font-mono text-display font-medium text-primary/15 tabular-nums">
-                    {String(n).padStart(2, "0")}
-                  </span>
-                </div>
-              )}
             </div>
           </section>
         );
       })}
 
-      {who && (
-        <section aria-labelledby="who-title" className="container-page section-y">
-          <h2 id="who-title" className="text-h2">{who.title}</h2>
-          <p className="mt-4 max-w-prose text-body-lg text-muted-foreground">{who.body.split("\n")[0]}</p>
-          <ul className="mt-8 flex flex-wrap gap-3">
-            {industries.map((page) => (
-              <li key={page.slug}>
-                <Link
-                  href={page.slug}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full border bg-card px-5 text-small font-medium transition-colors hover:border-primary/50 hover:text-primary"
-                >
-                  {page.h1}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {why && (
-        <section aria-labelledby="why-title" className="border-y bg-card">
-          <div className="container-page section-y">
-            <h2 id="why-title" className="max-w-2xl text-h2">{why.title}</h2>
-            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {whyPoints.map(([, title, text]) => (
-                <li key={title} className="rounded-2xl border bg-background p-6">
-                  <Check aria-hidden className="size-6 text-primary" />
-                  <p className="mt-4 text-h4">{title}</p>
-                  <p className="mt-2 text-small text-muted-foreground">{text}</p>
+      {/* Everything after the scroll story sits on an opaque surface over the fixed canvas. */}
+      <div className="relative border-t bg-background">
+        {who && (
+          <section aria-labelledby="who-title" className="container-page section-y">
+            <h2 id="who-title" className="text-h2">{who.title}</h2>
+            <p className="mt-4 max-w-prose text-body-lg text-muted-foreground">{who.body.split("\n")[0]}</p>
+            <ul className="mt-8 flex flex-wrap gap-3">
+              {industries.map((page) => (
+                <li key={page.slug}>
+                  <Link
+                    href={page.slug}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border bg-card px-5 text-small font-medium transition-colors hover:border-primary/50 hover:text-primary"
+                  >
+                    {page.h1}
+                  </Link>
                 </li>
               ))}
             </ul>
-            {whyLink && <Markdown source={whyLink} ctx={ctx} className="mt-6" />}
-          </div>
-        </section>
-      )}
-
-      <div className="container-page grid gap-4 section-y md:grid-cols-2">
-        {procurement && (
-          <div className="flex flex-col rounded-2xl border bg-card p-6 elevation-1 md:p-8">
-            <FileCheck2 aria-hidden className="size-6 text-primary" />
-            <h2 className="mt-4 text-h3">{procurement.title}</h2>
-            <Markdown source={procurement.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
-          </div>
+          </section>
         )}
-        {attack && (
-          <div className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8">
-            <ShieldAlert aria-hidden className="size-6 text-primary" />
-            <h2 className="mt-4 text-h3">{attack.title}</h2>
-            <Markdown source={attack.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
-          </div>
+
+        {why && (
+          <section aria-labelledby="why-title" className="border-y bg-card">
+            <div className="container-page section-y">
+              <h2 id="why-title" className="max-w-2xl text-h2">{why.title}</h2>
+              <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {whyPoints.map(([, title, text]) => (
+                  <li key={title} className="rounded-2xl border bg-background p-6">
+                    <Check aria-hidden className="size-6 text-primary" />
+                    <p className="mt-4 text-h4">{title}</p>
+                    <p className="mt-2 text-small text-muted-foreground">{text}</p>
+                  </li>
+                ))}
+              </ul>
+              {whyLink && <Markdown source={whyLink} ctx={ctx} className="mt-6" />}
+            </div>
+          </section>
+        )}
+
+        <div className="container-page grid gap-4 section-y md:grid-cols-2">
+          {procurement && (
+            <div className="flex flex-col rounded-2xl border bg-card p-6 elevation-1 md:p-8">
+              <FileCheck2 aria-hidden className="size-6 text-primary" />
+              <h2 className="mt-4 text-h3">{procurement.title}</h2>
+              <Markdown source={procurement.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
+            </div>
+          )}
+          {attack && (
+            <div className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8">
+              <ShieldAlert aria-hidden className="size-6 text-primary" />
+              <h2 className="mt-4 text-h3">{attack.title}</h2>
+              <Markdown source={attack.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
+            </div>
+          )}
+        </div>
+
+        {facts.length > 0 && (
+          <section aria-labelledby="facts-title" className="container-page pb-16 md:pb-24">
+            <div className="rounded-2xl border p-6 md:p-8">
+              <h2 id="facts-title" className="eyebrow text-muted-foreground">{t("home.atAGlance")}</h2>
+              <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                {facts.filter((f) => showClaim(f.value)).map((f) => (
+                  <div key={f.label}>
+                    <dt className="text-small text-muted-foreground">{f.label}</dt>
+                    <dd className="mt-1 text-body">
+                      <Value text={f.value} />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <Link href="/about" className="mt-8 inline-flex min-h-11 items-center gap-2 text-small font-semibold text-primary">
+                {t("nav.about")}
+                <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
+              </Link>
+            </div>
+          </section>
         )}
       </div>
-
-      {facts.length > 0 && (
-        <section aria-labelledby="facts-title" className="container-page pb-16 md:pb-24">
-          <div className="rounded-2xl border p-6 md:p-8">
-            <h2 id="facts-title" className="eyebrow text-muted-foreground">{t("home.atAGlance")}</h2>
-            <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-              {facts.filter((f) => showClaim(f.value)).map((f) => (
-                <div key={f.label}>
-                  <dt className="text-small text-muted-foreground">{f.label}</dt>
-                  <dd className="mt-1 text-body">
-                    <Value text={f.value} />
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <Link href="/about" className="mt-8 inline-flex min-h-11 items-center gap-2 text-small font-semibold text-primary">
-              {t("nav.about")}
-              <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
-            </Link>
-          </div>
-        </section>
-      )}
     </main>
   );
 }
