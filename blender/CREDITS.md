@@ -10,8 +10,8 @@ These credits must appear on the website. Planned location: the Legal informatio
 |---|---|---|---|
 | Server rack | Crysis007-94 | https://sketchfab.com/3d-models/5320622f6c0741b7aed399bfa2965dc4 | Not used |
 | Server Racking System | mcpanayides | https://sketchfab.com/3d-models/6fe2cacf836b4aed96c650b286db5486 | Data hall racks (beat 2) |
-| Nathan Animated 003 - Walking 3D Man | renderpeople | https://sketchfab.com/3d-models/143a2b1ea5eb4385ae90a73657aca3bc | People in the offices, data hall and plaza |
-| Mei Posed 001 - Female Walking Business Model | renderpeople | https://sketchfab.com/3d-models/07f308b81bc045c8917104a72ce2ffe4 | People in the offices, data hall and plaza |
+| Nathan Animated 003 - Walking 3D Man | renderpeople | https://sketchfab.com/3d-models/143a2b1ea5eb4385ae90a73657aca3bc | Not used |
+| Mei Posed 001 - Female Walking Business Model | renderpeople | https://sketchfab.com/3d-models/07f308b81bc045c8917104a72ce2ffe4 | Not used |
 | Future Car | dennish2010 | https://sketchfab.com/3d-models/hliAt7xc6YU2XjXh5G4lzmQwFmR | Not used |
 | Cyber Vehicle | whisper.alt | https://sketchfab.com/3d-models/27674d0e2429461fa5604d598bf97ae5 | Not used |
 | Bionic Architecture | vishchun | https://sketchfab.com/3d-models/6a40bae62e614e0990742871eed788f6 | Not used |

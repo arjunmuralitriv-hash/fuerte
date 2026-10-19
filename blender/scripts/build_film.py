@@ -4,13 +4,14 @@ that section is centred and scrubs the transitions in between.
 
   0 Arrival    glide in over Doha Bay to Fuerte's tower: lit, occupied floors, the red band
   1 Spine      holographic scan turns the facade translucent; pulses race up the fibre riser and out along each floor
-  2 Data hall  through the glass into floor DH_FLOOR: contained cold aisle, live rack LEDs, engineers, cool haze
+  2 Data hall  through the glass into floor DH_FLOOR: contained cold aisle, live rack LEDs, cool haze
   3 Devices    plaza and lobby: CCTV sight-lines, speed gates, video wall, network lines pulsing into the building
   4 Shield     hexagonal dome blooms up over the tower and deflects incoming threat streaks
   5 City       aerial pull-back with network arcs between West Bay's towers; Lusail and The Pearl on the horizon
   6 Settle     calm night, the tower toward the end side, clean sky for the call to action
 
-Run (assets dir, output .blend, optional "--theme light|dark" (default dark) and
+Run (assets dir, output .blend, optional "--theme light|dark" (default dark), "--format landscape|portrait" (default
+landscape; portrait is the phone framing) and
 "--render <dir> <w> <h> <samples> <frames>", frames like "1,140" or "1-528:2"):
   blender --background --factory-startup --disable-autoexec --python build_film.py -- <assets> <out.blend> [--theme ...] [--render ...]
 
@@ -55,6 +56,7 @@ def srgb(hex_):
 
 
 DARK = THEME == "dark"
+PORTRAIT = "--format" in ARGS and ARGS[ARGS.index("--format") + 1] == "portrait"
 GLOW = srgb("#FF5A3C" if DARK else "#FF4A2E")  # --glow: 3D emissive
 BRAND_RED = srgb("#D0230C" if DARK else "#BC1704")  # --primary
 LED_WARM, LED_COOL = (1.0, 0.8, 0.58), (0.86, 0.92, 1.0)  # neutral architectural LEDs, about 3000 K and 6500 K
@@ -427,7 +429,7 @@ def ring(i, inset=0.0, z_off=0.0):
     return out
 
 
-def fuerte_tower(col, furniture, people):
+def fuerte_tower(col, furniture):
     mats = {
         "glass": glass("fuerte_glass", tint=(0.66, 0.75, 0.8), reflect=0.9),
         "spandrel": principled("spandrel", (0.03, 0.035, 0.04), rough=0.25, metal=1.0),
@@ -505,7 +507,7 @@ def fuerte_tower(col, furniture, people):
 
     # Ceiling light panels: a grid under every slab, outside the core; each floor gets a mood (warm, cool, or dim).
     pan = bmesh.new()
-    desks, desk_rot, folk, folk_rot = [], [], [], []
+    desks, desk_rot = [], []
     for i in range(FLOORS):
         s, tw = level(i)
         rot = Matrix.Rotation(tw, 3, "Z")
@@ -522,7 +524,7 @@ def fuerte_tower(col, furniture, people):
                 f.material_index = mood - 1  # wound so the panel faces down
         if i < 2 or i == DH_FLOOR:
             continue  # lobby floors stay open; the data hall is furnished by data_hall()
-        # Workstations along the glass and in a second row; people near the windows and in aisles.
+        # Workstations along the glass and in a second row.
         for row, inset in ((0, 2.6), (1, 6.0)):
             pts = ring(i, inset=inset)
             for k in range(0, len(pts), 2 if row == 0 else 3):
@@ -531,14 +533,9 @@ def fuerte_tower(col, furniture, people):
                 p = pts[k]
                 desks.append((p.x, p.y, i * FLOOR_H + 0.02))
                 desk_rot.append(math.atan2(p.y, p.x) + math.pi / 2 + RNG.uniform(-0.12, 0.12))
-        for _ in range(RNG.randint(4, 11) if mood != 3 else RNG.randint(0, 2)):
-            p = RNG.choice(ring(i, inset=RNG.uniform(1.4, 4.0)))
-            folk.append((p.x, p.y, i * FLOOR_H + 0.02))
-            folk_rot.append(RNG.uniform(0, math.tau))
     panels = obj_from_bmesh("fuerte_panels", pan, col, [mats["panel_warm"], mats["panel_cool"], mats["panel_dim"]])
     panels.visible_shadow = False
     instancer("fuerte_workstations", desks, desk_rot, furniture, col)
-    instancer("fuerte_people", folk, folk_rot, people, col)
 
     # Brand band: a red helix ribbon wrapping the tower one full turn, floor 6 to the roof.
     rb = bmesh.new()
@@ -634,45 +631,6 @@ def furniture_sets(src):
     for o in (desk, chair, laptop, tv, plant, lamp):
         bpy.data.objects.remove(o)
     return variants
-
-
-def people_sets(src):
-    """Each person baked to one static mesh in their posed shape, 1.74 m tall, feet at the origin.
-
-    The glTF rigs carry scale on parents and armatures (bounds before baking are wrong), so the evaluated mesh is read
-    back in world space and measured from its real vertices.
-    """
-    sf = ASSETS / "sketchfab"
-    out = []
-    for name in ("renderpeople-mei-business", "renderpeople-nathan-walking"):
-        before = set(bpy.data.objects)
-        bpy.ops.import_scene.gltf(filepath=str(next((sf / name).glob("*.glb"))))
-        new = [o for o in bpy.data.objects if o not in before]
-        dg = bpy.context.evaluated_depsgraph_get()
-        bm = bmesh.new()
-        mats = []
-        for o in new:
-            if o.type != "MESH":
-                continue
-            ev = o.evaluated_get(dg)
-            me = ev.to_mesh()
-            me.transform(o.matrix_world)
-            offset = len(mats)
-            mats += [s.material for s in o.material_slots]
-            for p in me.polygons:
-                p.material_index += offset
-            bm.from_mesh(me)
-            ev.to_mesh_clear()
-        for o in new:
-            bpy.data.objects.remove(o)
-        zs = [v.co.z for v in bm.verts]
-        k = 1.74 / (max(zs) - min(zs))
-        cx = sum(v.co.x for v in bm.verts) / len(bm.verts)
-        cy = sum(v.co.y for v in bm.verts) / len(bm.verts)
-        bmesh.ops.translate(bm, verts=bm.verts, vec=(-cx, -cy, -min(zs)))
-        bmesh.ops.scale(bm, verts=bm.verts, vec=(k, k, k))
-        out.append(obj_from_bmesh(name, bm, src, mats))
-    return out
 
 
 # --------------------------------------------------------------------------------------------- West Bay (OpenStreetMap)
@@ -1437,9 +1395,9 @@ def led_wall(name):
     return m
 
 
-def data_hall(col, people):
+def data_hall(col):
     """Floor DH_FLOOR as a live data hall: ten rows of 42U racks around contained cold aisles running from the south
-    glass to the core, overhead fibre trays, LED status lights, engineers and a cool haze. Laid out in the floor's
+    glass to the core, overhead fibre trays, LED status lights and a cool haze. Laid out in the floor's
     own (twisted) frame: local -Y points out through the south facade."""
     z0 = DH_FLOOR * FLOOR_H + 0.3  # raised floor
     rot = Matrix.Rotation(level(DH_FLOOR)[1], 3, "Z")
@@ -1489,9 +1447,6 @@ def data_hall(col, people):
         strip(under, to_world(x, ys[0], 0), to_world(x, ys[-1], 0), 0.06, z0 + height + 0.39)
     obj_from_bmesh("tray_fibre", under, col, [bpy.data.materials["fibre"]]).visible_shadow = False
 
-    # Engineers in the aisles.
-    for (x, y, rz), person in zip(((0.35, -15.0, math.pi / 2), (-6.0, -12.6, -math.pi / 2), (6.3, -16.8, math.pi)), people * 2):
-        place(person, col, to_world(x, y), level(DH_FLOOR)[1] + rz)
 
     # Cool haze in the hall.
     bpy.ops.mesh.primitive_cube_add(size=1)
@@ -1503,7 +1458,7 @@ def data_hall(col, people):
     hz.matrix_world = Matrix.LocRotScale(to_world(0, -14.4, 1.9), rot, (31, 9.5, 3.8))
     m, nt, out = new_material("hall_haze")
     vol = node(nt, "ShaderNodeVolumePrincipled")
-    vol.inputs["Density"].default_value = 0.018
+    vol.inputs["Density"].default_value = 0.006
     vol.inputs["Color"].default_value = (0.86, 0.88, 0.9, 1)
     nt.links.new(vol.outputs[0], out.inputs["Volume"])
     hz.data.materials.append(m)
@@ -1538,7 +1493,7 @@ def dashboard(name):
     return m
 
 
-def plaza(col, people):
+def plaza(col):
     """Tower base on the sea side: paved plaza, lobby speed gates and video wall, CCTV on poles and on the facade with
     sight-line cones, and network lines pulsing from every device into the building."""
     pm = ASSETS / "polyhaven/models"
@@ -1623,10 +1578,6 @@ def plaza(col, people):
         a = math.radians(-150 + k * 17)
         r = 30 + (k % 2) * 14
         place(planter, col, (math.cos(a) * r, math.sin(a) * r, 0.04), a + math.pi / 2)
-    for k in range(14):
-        a = RNG.uniform(math.radians(-165), math.radians(-15))
-        r = RNG.uniform(24, 62)
-        place(people[k % len(people)], col, (math.cos(a) * r, math.sin(a) * r, 0.04), RNG.uniform(0, math.tau))
 
 
 # --------------------------------------------------------------------------------------------- beat 4: the shield
@@ -1817,27 +1768,37 @@ def camera(scene, col):
     # The data-hall aisle runs along floor DH_FLOOR's local -Y axis, out through the south glass.
     tw = level(DH_FLOOR)[1]
     aisle = lambda d, dz=0.0, x=0.0: tuple(Matrix.Rotation(tw, 3, "Z") @ Vector((x, -d, 0)) + Vector((0, 0, DH_FLOOR * FLOOR_H + 1.95 + dz)))
-    # Composed frames keep the subject toward the end side on desktop, clear of the copy (Fuerte-3D-Film-Plan.md): each aim
-    # sits a little to the start side of the subject.
+    # Shots are (frame, camera, subject, offset, lens). Landscape (desktop) aims at subject + offset: a little to the start
+    # side, so the subject sits toward the end side clear of the copy. Portrait (phones) aims at the subject itself and a
+    # lens shift lifts it into the upper 60% of the frame, above the copy at the bottom (Fuerte-3D-Film-Plan.md).
+    o = (0, 0, 0)
     shots = (
-        (1, (-60, -1250, 14), (-330, 0, 120), 28),  # 0 arrival: wide skyline
-        (96, (35, -360, 46), (0, 0, 190), 28),
-        (140, (-330, -300, 150), (-80, 89, 178), 28),  # 1 spine: three-quarter view of the whole tower
-        (176, (-40, -75, 84), aisle(0, -1.0), 26),
-        (196, aisle(34, 0.5), aisle(0), 22),  # lining up with the aisle outside the glass
-        (215, aisle(18.6), aisle(6, -0.4, -1.8), 20),  # 2 data hall: just inside the containment
-        (238, aisle(15.5), aisle(6, -0.4, -1.8), 20),
-        (254, aisle(36), aisle(0), 22),  # straight back out through the glass, aim level
-        (275, (16, -74, 26), (0, -14, 10), 24),  # sweep down outside toward the plaza
-        (295, (24, -50, 3.6), (-8, -19.5, 6.5), 24),  # 3 devices: plaza level, lobby through the glass
-        (320, (30, -58, 4.5), (-8, -20, 7), 24),
-        (375, (-260, -560, 150), (-136, 63, 175), 28),  # 4 shield: the whole dome
-        (398, (-285, -600, 165), (-136, 63, 175), 28),
-        (460, (-650, -1650, 980), (350, 900, 40), 24),  # 5 city: aerial over the bay, Lusail beyond
-        (492, (-600, -1550, 920), (350, 900, 40), 24),
-        (528, (-430, -900, 60), (-250, 0, 150), 35),  # 6 settle: tower to the end side, sky for the CTA
+        (1, (-60, -1250, 14), (0, 0, 120), (-330, 0, 0), 28),  # 0 arrival: wide skyline
+        (96, (35, -360, 46), (0, 0, 190), o, 28),
+        (140, (-330, -300, 150), (0, 0, 178), (-80, 89, 0), 28),  # 1 spine: three-quarter view of the whole tower
+        (176, (-40, -75, 84), aisle(0, -1.0), o, 26),
+        (196, aisle(34, 0.5), aisle(0), o, 22),  # lining up with the aisle outside the glass
+        (215, aisle(18.6), aisle(6, -0.4), "aisle", 20),  # 2 data hall: just inside the containment
+        (238, aisle(15.5), aisle(6, -0.4), "aisle", 20),
+        (254, aisle(36), aisle(0), o, 22),  # straight back out through the glass, aim level
+        (275, (16, -74, 26), (0, -14, 10), o, 24),  # sweep down outside toward the plaza
+        (295, (24, -50, 3.6), (0, -14, 6.5), (-8, -5.5, 0), 24),  # 3 devices: plaza level, lobby through the glass
+        (320, (30, -58, 4.5), (0, -14, 7), (-8, -6, 0), 24),
+        (375, (-260, -560, 150), (0, 0, 175), (-136, 63, 0), 28),  # 4 shield: the whole dome
+        (398, (-285, -600, 165), (0, 0, 175), (-136, 63, 0), 28),
+        (460, (-650, -1650, 980), (350, 900, 40), o, 24),  # 5 city: aerial over the bay, Lusail beyond
+        (492, (-600, -1550, 920), (350, 900, 40), o, 24),
+        (528, (-430, -900, 60), (0, 0, 150), (-250, 0, 0), 35),  # 6 settle: tower to the end side, sky for the CTA
     )
-    for f, loc, aim, lens in shots:
+    if PORTRAIT:
+        cam_data.shift_y = -0.12
+    for f, loc, subject, offset, lens in shots:
+        if PORTRAIT:
+            aim = subject
+        elif offset == "aisle":
+            aim = aisle(6, -0.4, -1.8)
+        else:
+            aim = tuple(a + b for a, b in zip(subject, offset))
         cam.location = loc
         cam.keyframe_insert("location", frame=f)
         target.location = aim
@@ -1856,16 +1817,13 @@ def build():
         for c in v.users_collection:
             c.objects.unlink(v)
         furn.objects.link(v)
-    people_src = collection("people_src", hide=True)
-    people_sets(people_src)
-    people = list(people_src.objects)
     land_and_sea(set_col)
-    fuerte_tower(set_col, furn, people_src)
+    fuerte_tower(set_col, furn)
     doha(set_col)
     corniche(set_col)
     spine(set_col)
-    data_hall(set_col, people)
-    plaza(set_col, people)
+    data_hall(set_col)
+    plaza(set_col)
     shield(set_col)
     arcs(set_col)
     atmosphere(set_col)

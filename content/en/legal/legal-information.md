@@ -49,6 +49,14 @@ Do not show any licence row that Fuerte does not hold.
 
 We send marketing emails only to people who have given explicit consent. Each one is clearly marked as a commercial message from Fuerte and includes a one-click unsubscribe link.
 
+## 3D imagery credits
+
+The 3D film on the home page was made in Blender from these sources:
+
+- Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the Open Database Licence: building outlines, heights and coastline of West Bay, Lusail and The Pearl.
+- "Server Racking System" by mcpanayides, from [Sketchfab](https://sketchfab.com/3d-models/6fe2cacf836b4aed96c650b286db5486), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Lit and rendered as part of the film.
+- Models, materials and skies from [Poly Haven](https://polyhaven.com) and [ambientCG](https://ambientcg.com), released into the public domain (CC0).
+
 ## Related pages
 
 - [Privacy notice](/legal/privacy)
