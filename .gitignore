@@ -49,3 +49,4 @@ next-env.d.ts
 
 # Blender source assets (downloaded, licences in blender/CREDITS.md)
 /blender/assets/
+/blender/build/
