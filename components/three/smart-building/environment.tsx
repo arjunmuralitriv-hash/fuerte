@@ -14,6 +14,7 @@ import {
   SphereGeometry,
   Object3D,
   type Color,
+  type PointLight,
   type SpotLight,
 } from "three";
 
@@ -21,6 +22,7 @@ import { useScene } from "./context";
 import { KEY_DIR, RIM_DIR, createGroundMaterial, createSkyMaterial } from "./materials";
 import { random } from "./math";
 import { layerWeights } from "./timeline";
+import { TOWER, floorY } from "./tower";
 
 /**
  * Image-based lighting. Desktop: the theme's Poly Haven HDRI (night: Rooftop Night, dusk: Qwantani
@@ -69,6 +71,7 @@ export function Atmosphere() {
   const { state, quality, palette } = useScene();
   const scene = useThree((s) => s.scene);
   const rim = useRef<SpotLight>(null);
+  const work = useRef<PointLight>(null);
   const rimTarget = useMemo(() => {
     const target = new Object3D();
     target.position.set(0, 7, 0);
@@ -130,7 +133,9 @@ export function Atmosphere() {
     // Open the fog up as the camera pulls out over the city.
     if (scene.fog instanceof Fog) scene.fog.far = palette.fogFar * (1 + network * 0.7);
     // Inside the opened data hall the rim-light would wash the room red; let it fall away.
-    if (rim.current) rim.current.intensity = palette.rimIntensity * (1 - layerWeights(state.beat).slice);
+    const slice = layerWeights(state.beat).slice;
+    if (rim.current) rim.current.intensity = palette.rimIntensity * (1 - slice);
+    if (work.current) work.current.intensity = slice * 3.5;
     const ground = objects.ground.material.uniforms;
     ground.uNetwork.value = network;
     ground.uTime.value = clock.elapsedTime;
@@ -156,16 +161,23 @@ export function Atmosphere() {
         target={rimTarget}
       />
       <primitive object={rimTarget} />
-      {/* Grounds the podium and poles; drawn once (nothing near the ground moves). */}
-      <ContactShadows
-        position={[0, 0.004, 0]}
-        scale={14}
-        resolution={quality.contactShadowResolution}
-        blur={2.4}
-        far={2.5}
-        opacity={palette.dark ? 0.8 : 0.5}
-        frames={1}
-      />
+      {/* The data hall's work light. Mounted here, with the other lights, and never hidden: every
+          lit shader is built for the light count, so a light that arrived with the hall layer (or
+          dropped out while the hall is closed) would rebuild all of them. */}
+      <pointLight ref={work} position={[0, floorY(TOWER.hallFloor) + 0.59, 0]} distance={3} decay={1.2} intensity={0} color="#eef3ff" />
+      {/* Grounds the podium and poles; drawn once (nothing near the ground moves). Desktop only:
+          its depth and blur shaders cost ~100 ms of start-up on a throttled phone. */}
+      {quality.tier === "desktop" && (
+        <ContactShadows
+          position={[0, 0.004, 0]}
+          scale={14}
+          resolution={quality.contactShadowResolution}
+          blur={2.4}
+          far={2.5}
+          opacity={palette.dark ? 0.8 : 0.5}
+          frames={1}
+        />
+      )}
     </>
   );
 }

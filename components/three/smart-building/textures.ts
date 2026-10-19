@@ -369,3 +369,31 @@ export const cityFacades = once(() => {
   ctx.globalAlpha = 1;
   return { maps, lit: toTexture(c, true) };
 });
+
+/**
+ * Generates every canvas texture ahead of the layer builds, one generator per task with a yield
+ * in between, so none of them lands inside a long build task. The noise normal maps are only
+ * made when the downloaded PBR maps are unavailable.
+ */
+export async function prepareTextures(
+  withFallbackMaps: boolean,
+  yieldToMain: () => Promise<void>,
+  onStep: (done: number, total: number) => void,
+) {
+  const steps = [
+    serverFaces,
+    perforation,
+    cabinetFaces,
+    floorTiles,
+    ladderTray,
+    patchPanel,
+    speakerGrille,
+    cityFacades,
+    ...(withFallbackMaps ? [concreteNormal, brushedNormal] : []),
+  ];
+  for (const [i, make] of steps.entries()) {
+    make();
+    onStep(i + 1, steps.length);
+    await yieldToMain();
+  }
+}

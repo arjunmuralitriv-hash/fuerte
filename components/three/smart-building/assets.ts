@@ -9,9 +9,9 @@ import {
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 
 /**
- * Downloaded CC0 assets (credits in components/three/README.md). Both loaders report through
- * three's DefaultLoadingManager, so the preloader's percentage includes them. Any failure falls
- * back to the procedural canvas maps and the Lightformer environment.
+ * Downloaded CC0 assets (credits in components/three/README.md). `onFile` fires as each file
+ * arrives so the preloader can count them. Any failure falls back to the procedural canvas maps
+ * and the Lightformer environment.
  */
 
 export type SceneMaps = {
@@ -31,15 +31,19 @@ const loadTexture = async (url: string, srgb: boolean) => {
   return t;
 };
 
-export async function loadMaps(size: MapSize): Promise<SceneMaps | null> {
+/** Number of files `loadMaps` fetches (for progress). */
+export const MAP_FILES = 5;
+
+export async function loadMaps(size: MapSize, onFile: () => void = () => {}): Promise<SceneMaps | null> {
   const url = (name: string) => `/textures/${name}-${size}.webp`;
+  const counted = (p: Promise<Texture>) => p.then((t) => (onFile(), t));
   try {
     const [color, concreteNormal, concreteRough, brushedNormal, brushedRough] = await Promise.all([
-      loadTexture(url("concrete-color"), true),
-      loadTexture(url("concrete-normal"), false),
-      loadTexture(url("concrete-roughness"), false),
-      loadTexture(url("brushed-normal"), false),
-      loadTexture(url("brushed-roughness"), false),
+      counted(loadTexture(url("concrete-color"), true)),
+      counted(loadTexture(url("concrete-normal"), false)),
+      counted(loadTexture(url("concrete-roughness"), false)),
+      counted(loadTexture(url("brushed-normal"), false)),
+      counted(loadTexture(url("brushed-roughness"), false)),
     ]);
     for (const t of [color, concreteNormal, concreteRough]) t.repeat.set(2, 2);
     return {

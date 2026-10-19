@@ -2,24 +2,21 @@
 
 import { addAfterEffect, addEffect, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
-import { ToneMappingMode } from "postprocessing";
+import { EffectPass, ToneMappingMode, type EffectComposer as PostComposer } from "postprocessing";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
-  HalfFloatType,
   MathUtils,
   Vector3,
-  WebGLRenderTarget,
   type InstancedMesh,
-  type Mesh,
+  type Material,
   type Object3D,
   type PerspectiveCamera,
-  type Texture,
 } from "three";
 
 import { useScene } from "./context";
-import { endLoading } from "./loading";
+import { offScene } from "./stager";
 import { LAST_BEAT, offsetCurve, targetCurve } from "./timeline";
 
 const target = new Vector3();
@@ -158,60 +155,32 @@ export function Director() {
   return null;
 }
 
-/**
- * Compiles every shader before the first visible frame, then reports ready. Layers that start
- * hidden are shown for the compile, and on desktop the compile targets a half-float buffer like the
- * composer's, so no program is first built mid-scroll (that showed as a ~400 ms hitch at beat 3).
- */
-export function Ready({ onReady }: { onReady: () => void }) {
-  const { gl, scene, camera, invalidate } = useThree();
-  const { quality } = useScene();
-
-  useEffect(() => {
-    let cancelled = false;
-    endLoading("build");
-    const hidden: Object3D[] = [];
-    const textures = new Set<Texture>();
-    scene.traverse((o) => {
-      for (const m of [(o as Mesh).material ?? []].flat()) {
-        for (const value of Object.values(m)) if ((value as Texture)?.isTexture) textures.add(value as Texture);
-      }
-      if (o.visible) return;
-      hidden.push(o);
-      o.visible = true;
-    });
-    // Upload every texture now too; first use mid-scroll cost 30-80 ms per layer.
-    for (const t of textures) gl.initTexture(t);
-    const target = quality.post ? new WebGLRenderTarget(1, 1, { type: HalfFloatType }) : null;
-    const previous = gl.getRenderTarget();
-    gl.setRenderTarget(target);
-    const compiled = gl.compileAsync(scene, camera);
-    // compileAsync gathers its programs synchronously, so the scene can be restored straight away.
-    gl.setRenderTarget(previous);
-    for (const o of hidden) o.visible = false;
-    compiled
-      .catch(() => undefined)
-      .finally(() => target?.dispose())
-      .then(() => {
-        if (cancelled) return;
-        endLoading("compile");
-        invalidate();
-        // Two frames: let the first real frame land before the canvas fades in.
-        requestAnimationFrame(() => requestAnimationFrame(() => !cancelled && onReady()));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [gl, scene, camera, invalidate, onReady, quality.post]);
-
-  return null;
-}
-
 /** Desktop only: N8AO ambient occlusion, subtle bloom on emissives, neutral tone mapping, SMAA. */
 export function Effects() {
   const { palette } = useScene();
+  const composer = useRef<PostComposer>(null);
+
+  // Hand the passes' materials to the stager so they compile asynchronously with the rest. The
+  // composer and its passes only appear a few commits after this layer mounts, so the stager waits.
+  useLayoutEffect(() => {
+    let cancelled = false;
+    offScene.ready = (async () => {
+      for (let i = 0; i < 120 && !cancelled; i++) {
+        const passes = composer.current?.passes;
+        if (passes?.some((p) => p instanceof EffectPass)) {
+          collectMaterials(passes, offScene.materials);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 16));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <EffectComposer multisampling={0}>
+    <EffectComposer ref={composer} multisampling={0}>
       <N8AO
         // N8AO gamma-corrects by default (meant for when it is the last pass). Mid-chain that
         // applies sRGB twice and lifts every dark into maroon, so switch it off.
@@ -237,6 +206,22 @@ export function Effects() {
       <SMAA />
     </EffectComposer>
   );
+}
+
+/** Materials held by post-processing passes (a shallow walk; skips textures, targets and non-mesh objects). */
+function collectMaterials(root: unknown, out: Set<Material>, depth = 0, seen = new Set<unknown>()) {
+  if (!root || typeof root !== "object" || seen.has(root) || depth > 6) return;
+  seen.add(root);
+  const o = root as { isMaterial?: boolean; isTexture?: boolean; isWebGLRenderTarget?: boolean; isObject3D?: boolean; isMesh?: boolean };
+  if (o.isMaterial) {
+    out.add(root as Material);
+    return;
+  }
+  if (o.isTexture || o.isWebGLRenderTarget || (o.isObject3D && !o.isMesh)) return;
+  // Not into R3F's bookkeeping or the renderer: those lead back to other passes at a greater depth.
+  for (const [key, value] of Object.entries(root)) {
+    if (key !== "__r3f" && key !== "renderer") collectMaterials(value, out, depth + 1, seen);
+  }
 }
 
 type FrameSample = { t: number; cpu: number; gpu: number | null; triangles: number; calls: number };

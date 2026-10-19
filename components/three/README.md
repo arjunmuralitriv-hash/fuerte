@@ -3,6 +3,11 @@
 A Doha tower that opens layer by layer as the home page scrolls. Each layer is one service.
 The scene only draws; every word stays in the page's own HTML.
 
+> **Status (19 Oct 2026): on hold.**
+> - The user has rejected the procedural look. The main session is choosing an asset-based approach: pre-rendered frames from a licensed city kit, or real-time with licensed models.
+> - **In the working tree, uncommitted:** the finished start-up fix described under "Start-up and the main thread". tsc and eslint pass.
+> - **Not in the tree:** a half-built cinematic camera and exploded-view pass was started, then rolled back on the hold. It is saved outside the repo, in the scene session's scratchpad (`cinematic-wip/`).
+
 ## Mount it
 
 ```tsx
@@ -25,7 +30,9 @@ export function HomeScene() {
   - `h-lvh` stops the canvas resizing when the mobile URL bar shows or hides.
   - Keep `<html>` without a background colour, so `body`'s background paints underneath it.
 - Text over the scene needs its own contrast, for example the dev page's `bg-background/80 backdrop-blur-sm` cards.
-- The canvas appears after first paint, in its own lazy chunk (three, R3F, postprocessing and GSAP). It is never the LCP element.
+- The canvas appears well after first paint and never becomes the LCP element (see "Start-up and the main thread").
+  - The chunk `next/dynamic` loads is a small shell with no three.js in it.
+  - The shell imports three, R3F, postprocessing and the scene itself one at a time, only once the page is idle.
 
 ## The data-beat contract
 
@@ -106,7 +113,7 @@ All geometry is procedural (no model files). Lighting and the main surfaces use 
   - mobile/low, and while an HDRI loads: an environment built from Lightformers, night and dusk sets
   - a moon or sun key light
   - a narrow red rim spotlight on the tower
-  - contact shadows
+  - contact shadows (desktop only)
 
 ## Performance profile
 
@@ -119,13 +126,15 @@ All geometry is procedural (no model files). Lighting and the main surfaces use 
   | Profile | Used on | DPR cap | Post-processing | Other differences |
   |---|---|---|---|---|
   | Desktop | tier 2 or 3 | 2 | N8AO (half-res), subtle bloom, neutral tone mapping, SMAA | lobby glass transmission, 256 px environment map |
-  | Mobile | phones, small or touch screens | 1.5 | None (renderer neutral tone mapping) | 16 facets, 2-floor panels, fewer fibre branches, racks and devices, unbevelled shield, smaller city |
-  | Low | tier 1, or unknown GPU | 1.25 | None | as mobile |
+  | Mobile | phones, small or touch screens, tier 2 or 3 | 1.5 | None (renderer neutral tone mapping) | 16 facets, 2-floor panels, fewer fibre branches, racks and devices, unbevelled shield, smaller city, no contact shadows |
+  | Low | tier 1 or unknown GPU, not a phone | 1.25 | None | as mobile |
 
-- **No mid-scroll hitches:** before the first frame, `Ready`:
-  - compiles every program, including layers that start hidden, against a half-float target like the composer's
+- **No mid-scroll hitches:** before the first frame, the stager:
+  - compiles every program, including layers that start hidden (on desktop, against a half-float target like the composer's)
+  - compiles the PMREM filters and every post-processing pass the same way
   - uploads every texture
-- **Start-up:** the preloader covers the downloads, geometry build and shader compile; about 2 s on desktop from a warm cache. Its percentage counts the GPU check, each texture, the HDRI, the build and the compile.
+  - The light count is fixed from the first layer on. The data hall's work light lives in `Atmosphere`, because a light arriving later would rebuild every lit shader.
+- **Start-up:** see "Start-up and the main thread" below. The preloader's percentage counts real steps: the GPU check, each code chunk, each downloaded file, each canvas texture, each layer built and each layer compiled, then the warm-up frame.
 - **Preloader position:** centred from md up; on phones it is small and faint in the bottom-end corner, above the mobile CTA bar (4.75rem + safe area), clear of the hero text.
 - **Adaptive resolution:**
   - **How it measures:** it only uses frames rendered back to back while the beat is moving. The throttled idle redraws are ignored.
@@ -138,8 +147,52 @@ All geometry is procedural (no model files). Lighting and the main surfaces use 
   - Hidden layers skip their draw calls.
   - Physical surfaces use `MeshStandardMaterial` and `MeshPhysicalMaterial`.
   - Light-emitting parts use small custom shaders.
-- **Fallback:** `SceneFallback` renders instead of the canvas for reduced motion, no WebGL, a blocklisted GPU (tier 0) or Save-Data. It is static SVG built from tokens and is server-safe.
+- **Fallback:** `SceneFallback` renders instead of the canvas in these cases. It is static SVG built from tokens and is server-safe.
+  - reduced motion, or Save-Data
+  - no WebGL
+  - a software renderer: SwiftShader, llvmpipe, Microsoft Basic Render and similar (this includes headless Lighthouse)
+  - a blocklisted GPU (tier 0)
+  - a phone with a tier 1 or unknown GPU
 - **Theme:** colours come from `--primary`, `--glow` and `--background`, read again whenever next-themes' `resolvedTheme` changes. Fog, sky, bloom and emissive strength all follow the theme.
+
+## Start-up and the main thread
+
+The scene must never compete with the page for the main thread. The H1 and CTAs are interactive long before any 3D work starts.
+
+1. **Wait.** Nothing runs until the `load` event, then one animation frame, then `requestIdleCallback` (3 s timeout).
+2. **Decide.** The fallback rules above run on one probe context, which is then released. A fallback page never downloads three.js.
+3. **Load code.** three, R3F, postprocessing (desktop only) and the scene import one per task.
+4. **Build in stages** (`smart-building/stager.tsx`, `startup.ts`):
+   - Canvas textures are drawn one per task.
+   - Layers mount one at a time: atmosphere and lights, hall, tower, devices, shield, city, then effects.
+   - After each layer, its meshes compile with `renderer.compileAsync`, one per task (with `KHR_parallel_shader_compile` the driver links off the main thread). Its textures then upload, one per task.
+   - Tasks yield through `scheduler.yield`, falling back to a `MessageChannel`.
+   - The canvas does not render (`frameloop="never"`) until one warm-up frame at the end.
+5. **PMREM.** The first lit material makes three filter the environment map.
+   - Its filter shaders would otherwise link synchronously, costing about 1.2 s on a throttled phone.
+   - A private `PMREMGenerator` of the same size compiles them asynchronously first.
+   - The warm-up geometry carries a position attribute only. Program keys depend on which attributes a geometry has, so a different set would compile a variant the real pass never uses.
+6. **Post-processing.** The composer's passes only exist a few commits after the effects layer mounts. The stager waits for them, then compiles each pass's materials asynchronously.
+
+**Measured (19 Oct 2026, production build, RTX 4050 headless Chrome, CPU throttled 4×, 412 × 823 at DPR 1.75)**
+
+| | Before | After |
+|---|---|---|
+| Total blocking, page load to scene ready (mobile profile) | ~12 s | 0.41–0.49 s |
+| Longest task (mobile profile) | 8.5 s | 180–206 ms (creating the WebGL canvas, one call) |
+| Scene ready (mobile profile) | — | 4.1–4.5 s after navigation |
+| Warm-up frame (mobile profile) | 1.4–4 s | ~60 ms, no shader links |
+| Desktop profile, unthrottled | — | total blocking 98 ms; longest task 125 ms (the warm-up frame) |
+| Desktop profile, throttled 4× | — | longest task 241 ms (the warm-up frame) |
+| Shader links after the scene is ready | some (beat 2 hitch) | none |
+
+"Before" combines the Lighthouse baseline that prompted this work (12–13 s TBT, an 8.5 s task) with this probe's first runs (the warm-up frame).
+
+- The desktop warm-up still links four programs, for drei's `ContactShadows` (a depth override and two blurs). drei does not expose those materials.
+- **Lighthouse 12.8.2, mobile, production `next start`:**
+  - /en: performance 94, TBT 40 ms, longest task 93 ms (HTML parse)
+  - /ar: performance 86, TBT 20 ms. LCP is 3.8 s, from the H1 render delay: Arabic web fonts and HTML parse, not the scene.
+  - Headless Lighthouse renders WebGL in software, so it takes the fallback and these runs contain no 3D work. The 3D path is the table above.
 
 ## Assets and credits
 
@@ -188,7 +241,8 @@ Dev page `?stats=1`, a scripted scrub from beat 0 to 6 and back (6 s each way), 
 | Draw calls, peak | 246 | 86 |
 
 **First scrub after load**
-- At most one 30–45 ms CPU frame; every later frame is under 4 ms.
+- Re-run after the start-up work (headless Chrome on the same GPU, production build): desktop 165 fps, frame p50/p95 6.1/6.3 ms, worst frame 17 ms, CPU p50/p95 1.6/2.1 ms, GPU 5.7/6.5 ms. Mobile profile: 165 fps, worst frame 17.7 ms, CPU 0.8/1.1 ms, GPU 3.5/4.7 ms. No frame over 33 ms and no long task during either scrub.
+- Before this work: at most one 30–45 ms CPU frame; every later frame was under 4 ms.
 - Before the pre-compile and texture-upload fix, the first visit to beat 3 cost about 390 ms.
 - Transparent double-sided materials now draw in a single pass (`forceSinglePass`), so they need no extra shader variants on first use.
 

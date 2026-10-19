@@ -1,18 +1,17 @@
 "use client";
 
-import { useProgress } from "@react-three/drei";
 import { useEffect, useState } from "react";
 
 import { Loader } from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 
 /**
- * `working · gyro` orb with the scene's load percentage; fades out once the first frame is drawn.
+ * `working · gyro` orb with the scene's start-up percentage (fed by the shell, which weighs each
+ * phase: GPU check, code, downloads, textures, layer builds, compiles); fades out once ready.
  * Phones: small and faint in the bottom-end corner, above the mobile CTA bar (4.75rem + safe area),
  * clear of the hero text. From md up: centred.
  */
-export function ScenePreloader({ ready }: { ready: boolean }) {
-  const progress = useProgress((s) => s.progress);
+export function ScenePreloader({ ready, percent }: { ready: boolean; percent: number }) {
   const [gone, setGone] = useState(false);
   // Read once: the scene (and so this preloader) only mounts client-side.
   const [isPhone] = useState(() => !window.matchMedia("(min-width: 48rem)").matches);
@@ -35,7 +34,7 @@ export function ScenePreloader({ ready }: { ready: boolean }) {
       <div className="flex items-center gap-2 md:flex-col md:gap-3">
         <Loader state="working" variant="gyro" size={isPhone ? 32 : 48} paused={ready} />
         <span aria-hidden className="font-mono text-small text-muted-foreground tabular-nums">
-          {Math.round(progress)}%
+          {percent}%
         </span>
       </div>
     </div>

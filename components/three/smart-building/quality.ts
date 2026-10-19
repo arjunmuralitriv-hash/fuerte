@@ -150,28 +150,37 @@ async function loadBenchmarks(file: string): Promise<ModelEntry[]> {
 const smallScreen = () =>
   window.matchMedia("(max-width: 767px)").matches || window.matchMedia("(pointer: coarse)").matches;
 
+/** Software rasterisers: WebGL works but every frame is CPU work, so they get the static fallback. */
+const SOFTWARE = /swiftshader|llvmpipe|softpipe|lavapipe|software|basic render|microsoft basic|mesa offscreen/i;
+
 /**
- * Picks the quality profile, or null when the device should get the static fallback
- * (no WebGL, a blocklisted GPU, or Save-Data on).
+ * Picks the quality profile, or null when the device should get the static fallback:
+ * no WebGL, a software renderer, a blocklisted GPU, a weak (tier ≤ 1) phone GPU, or Save-Data on.
+ * One probe context serves both the renderer check and detect-gpu, then is released.
  */
 export async function detectQuality(): Promise<Quality | null> {
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
   if (connection?.saveData) return null;
 
-  const gpu = await getGPUTier({ override: { loadBenchmarks } }).catch(() => null);
-  if (gpu && gpu.tier === 0) return null;
-  if (!gpu || gpu.tier === 1) return QUALITY.low;
-  return gpu.isMobile || smallScreen() ? QUALITY.mobile : QUALITY.desktop;
-}
-
-export function hasWebGL() {
+  let gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
   try {
     const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-    // Hand the probe context back now; browsers cap live WebGL contexts.
-    gl?.getExtension("WEBGL_lose_context")?.loseContext();
-    return Boolean(gl);
+    gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
   } catch {
-    return false;
+    gl = null;
+  }
+  if (!gl) return null;
+  try {
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? "");
+    if (SOFTWARE.test(renderer)) return null;
+    const gpu = await getGPUTier({ glContext: gl, override: { loadBenchmarks } }).catch(() => null);
+    const phone = Boolean(gpu?.isMobile) || smallScreen();
+    if (gpu && gpu.tier === 0) return null;
+    if (!gpu || gpu.tier === 1) return phone ? null : QUALITY.low;
+    return phone ? QUALITY.mobile : QUALITY.desktop;
+  } finally {
+    // Hand the probe context back now; browsers cap live WebGL contexts.
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }

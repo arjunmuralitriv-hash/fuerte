@@ -14,7 +14,6 @@ import {
   Vector2,
   type Group,
   type Matrix4,
-  type PointLight,
 } from "three";
 
 import { useScene } from "./context";
@@ -196,7 +195,6 @@ export function DataHall() {
   const materials = useMemo(() => createMaterials(maps), [maps]);
   const meshes = useMemo(() => buildHall(quality, materials), [quality, materials]);
   const group = useRef<Group>(null);
-  const work = useRef<PointLight>(null);
 
   useEffect(() => () => disposeMeshes(Object.values(meshes)), [meshes]);
   useEffect(() => () => disposeMaterials(materials), [materials]);
@@ -208,15 +206,14 @@ export function DataHall() {
       group.current.scale.y = Math.max(w, 0.001);
     }
     materials.led.uniforms.uTime.value = clock.elapsedTime;
-    if (work.current) work.current.intensity = w * 3.5;
   });
 
+  // The hall's work light lives in Atmosphere, so the light count is final from the first layer on.
   return (
     <group name="racks" ref={group} position-y={floorY(TOWER.hallFloor) + 0.03}>
       {Object.entries(meshes).map(([key, mesh]) => (
         <primitive key={key} object={mesh} />
       ))}
-      <pointLight ref={work} position={[0, 0.56, 0]} distance={3} decay={1.2} intensity={0} color="#eef3ff" />
     </group>
   );
 }

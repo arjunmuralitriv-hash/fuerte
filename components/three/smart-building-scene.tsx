@@ -1,33 +1,13 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
-import { useTheme } from "next-themes";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { NeutralToneMapping, NoToneMapping, type Texture } from "three";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType } from "react";
 
 import { SceneFallback } from "@/components/three/scene-fallback";
 import { ScenePreloader } from "@/components/three/scene-preloader";
-import { loadEnvironment, loadMaps, type SceneMaps } from "@/components/three/smart-building/assets";
-import { City } from "@/components/three/smart-building/city";
-import { SceneContext, type SceneState } from "@/components/three/smart-building/context";
-import { DataHall } from "@/components/three/smart-building/data-hall";
-import { Director, Effects, Ready, Stats } from "@/components/three/smart-building/director";
-import { ElvDevices } from "@/components/three/smart-building/elv-devices";
-import { Atmosphere } from "@/components/three/smart-building/environment";
-import { endAllLoading, endLoading, startLoading } from "@/components/three/smart-building/loading";
-import { readPalette, type Palette } from "@/components/three/smart-building/palette";
-import {
-  QUALITY,
-  detectQuality,
-  hasWebGL,
-  type Quality,
-  type QualityTier,
-} from "@/components/three/smart-building/quality";
-import { Shield } from "@/components/three/smart-building/shield";
-import { Tower } from "@/components/three/smart-building/tower";
+import { QUALITY, detectQuality, type Quality, type QualityTier } from "@/components/three/smart-building/quality";
+import type { SceneRootProps } from "@/components/three/smart-building/scene-root";
+import { createProgress, startWhenIdle, yieldToMain } from "@/components/three/smart-building/startup";
 import { cn } from "@/lib/utils";
-
-type Theme = "dark" | "light";
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const subscribeReducedMotion = (onChange: () => void) => {
@@ -48,6 +28,11 @@ type SmartBuildingSceneProps = {
 /**
  * The home page's "Smart-Building X-ray". Load it with next/dynamic and ssr: false.
  * It reads scroll position from the page's [data-beat="0" … "6"] sections; text stays in the page.
+ *
+ * This shell is deliberately small (no three.js). It waits until the page has loaded and gone
+ * idle, checks the GPU (software renderers and weak phones get the static fallback), then pulls
+ * in the 3D code chunk by chunk, one per task, and hands over to `SceneRoot`, which builds the
+ * scene a layer at a time. The preloader's percentage follows each of those phases.
  */
 export default function SmartBuildingScene({ className, quality: forced, stats }: SmartBuildingSceneProps) {
   const reducedMotion = useSyncExternalStore(
@@ -55,76 +40,54 @@ export default function SmartBuildingScene({ className, quality: forced, stats }
     () => window.matchMedia(REDUCED_MOTION).matches,
     () => true,
   );
-  /** undefined while detecting, null when the static fallback should show. */
+  /** undefined until decided, null when the static fallback should show. */
   const [quality, setQuality] = useState<Quality | null>();
-  const [maps, setMaps] = useState<SceneMaps | null>(null);
-  /** HDRIs by theme: undefined until requested, null if unavailable. Each loads at most once. */
-  const [environments, setEnvironments] = useState<Partial<Record<Theme, Texture | null>>>({});
-  const [palette, setPalette] = useState<Palette>();
+  const [Root, setRoot] = useState<ComponentType<SceneRootProps>>();
+  const [started, setStarted] = useState(false);
+  const [percent, setPercent] = useState(0);
   const [ready, setReady] = useState(false);
-  const [state] = useState<SceneState>(() => ({ target: 0, beat: 0, active: true }));
-  const { resolvedTheme } = useTheme();
+  const report = useMemo(() => createProgress(setPercent), []);
+  const onReady = useCallback(() => setReady(true), []);
 
   useEffect(() => {
     if (reducedMotion) return;
     let cancelled = false;
-    startLoading();
     (async () => {
-      const picked = !hasWebGL() ? null : forced ? QUALITY[forced] : await detectQuality();
+      await startWhenIdle();
       if (cancelled) return;
-      endLoading("gpu");
+      setStarted(true);
+      const picked = forced ? QUALITY[forced] : await detectQuality();
+      if (cancelled) return;
+      report("gpu", 1, 1);
       if (!picked) {
-        endAllLoading();
         setQuality(null);
         return;
       }
-      // Downloaded maps and the current theme's HDRI load before the canvas mounts, so the first
-      // frame is already final; both count towards the preloader's percentage.
-      const theme: Theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
-      const [loadedMaps, environment] = await Promise.all([
-        loadMaps(picked.mapSize),
-        picked.hdri ? loadEnvironment(theme) : Promise.resolve(null),
-      ]);
+      // The 3D libraries arrive as separate chunks; evaluating them one per task keeps each
+      // evaluation short instead of one long block.
+      const libraries: (() => Promise<unknown>)[] = [
+        () => import("three"),
+        () => import("@react-three/fiber"),
+        ...(picked.post ? [() => import("postprocessing")] : []),
+      ];
+      const steps = libraries.length + 1;
+      for (const [i, load] of libraries.entries()) {
+        await load();
+        report("code", i + 1, steps);
+        await yieldToMain();
+        if (cancelled) return;
+      }
+      const { SceneRoot } = await import("@/components/three/smart-building/scene-root");
+      report("code", steps, steps);
+      await yieldToMain();
       if (cancelled) return;
-      setMaps(loadedMaps);
-      if (picked.hdri) setEnvironments((e) => ({ ...e, [theme]: environment }));
+      setRoot(() => SceneRoot);
       setQuality(picked);
     })();
     return () => {
       cancelled = true;
-      endAllLoading();
     };
-  }, [reducedMotion, forced]);
-
-  // Read the tokens a frame after the theme flips, once next-themes has swapped the class on <html>.
-  useEffect(() => {
-    const id = requestAnimationFrame(() =>
-      setPalette(
-        readPalette(resolvedTheme ? resolvedTheme === "dark" : document.documentElement.classList.contains("dark")),
-      ),
-    );
-    return () => cancelAnimationFrame(id);
-  }, [resolvedTheme]);
-
-  // After a theme switch, fetch that theme's HDRI once; the Lightformers light the scene meanwhile.
-  const theme: Theme | undefined = palette ? (palette.dark ? "dark" : "light") : undefined;
-  useEffect(() => {
-    if (!quality?.hdri || !theme || theme in environments) return;
-    let cancelled = false;
-    loadEnvironment(theme).then((t) => {
-      if (!cancelled) setEnvironments((e) => ({ ...e, [theme]: t }));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [quality, theme, environments]);
-
-  const environment = theme ? (environments[theme] ?? null) : null;
-  const context = useMemo(
-    () => (quality && palette ? { state, quality, palette, maps, environment } : null),
-    [state, quality, palette, maps, environment],
-  );
-  const onReady = useCallback(() => setReady(true), []);
+  }, [reducedMotion, forced, report]);
 
   const wrapper = cn("pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh", className);
   if (reducedMotion || quality === null) {
@@ -137,44 +100,12 @@ export default function SmartBuildingScene({ className, quality: forced, stats }
 
   return (
     <div className={wrapper}>
-      {context && (
+      {Root && quality && (
         <div aria-hidden className={cn("size-full transition-opacity duration-700", ready ? "opacity-100" : "opacity-0")}>
-          <Canvas
-            frameloop="demand"
-            dpr={context.quality.dpr}
-            onCreated={({ gl }) => {
-              // Neutral (Khronos PBR) tone mapping keeps the brand red true; the desktop composer applies its own.
-              gl.toneMapping = context.quality.post ? NoToneMapping : NeutralToneMapping;
-              // The lobby's transmission pass only needs a soft, half-resolution view through the glass.
-              gl.transmissionResolutionScale = 0.5;
-              // Contact shadows render into a target that must clear to transparent, not opaque black
-              // (the canvas itself has no alpha channel, so this changes nothing on screen).
-              gl.setClearColor(0x000000, 0);
-            }}
-            gl={{
-              antialias: context.quality.antialias && !context.quality.post,
-              alpha: false,
-              stencil: false,
-              powerPreference: "high-performance",
-            }}
-            camera={{ fov: 38, near: 0.1, far: 600, position: [9.5, 2.8, 17.5] }}
-          >
-            <SceneContext value={context}>
-              <Director />
-              <Atmosphere />
-              <Tower />
-              <DataHall />
-              <ElvDevices />
-              <Shield />
-              <City />
-              {context.quality.post && <Effects />}
-              <Ready onReady={onReady} />
-              {stats && <Stats />}
-            </SceneContext>
-          </Canvas>
+          <Root quality={quality} stats={stats} report={report} onReady={onReady} />
         </div>
       )}
-      <ScenePreloader ready={ready} />
+      {started && <ScenePreloader ready={ready} percent={percent} />}
     </div>
   );
 }
