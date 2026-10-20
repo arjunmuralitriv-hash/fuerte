@@ -45,3 +45,7 @@ Doha Tower has no height in OSM, so its published height (238 m) is set in `prep
 - Marble021, Marble016, Tiles107, Carpet012, MetalWalkway010, Ground093C
 
 To re-fetch the CC0 set: `python -I blender/scripts/fetch_cc0_assets.py blender/assets`.
+
+## Our own renders
+
+The control room's video-wall feeds (`blender/assets/feeds/`, git-ignored) are stills rendered from this film's own scene by `blender/scripts/render_feeds.py` and `build_film.py`. No third-party credit needed.
