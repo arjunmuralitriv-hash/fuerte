@@ -12,7 +12,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DirectionProvider } from "@/components/ui/direction";
 import { routing } from "@/i18n/routing";
-import { JsonLd, organizationLd } from "@/lib/seo";
+import { JsonLd, organizationLd, websiteLd } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 import "../globals.css";
 
@@ -75,7 +75,7 @@ export default async function LocaleLayout({
       className={`${latin.variable} ${arabic.variable} ${mono.variable}`}
     >
       <body className="min-h-dvh pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-        <JsonLd data={organizationLd(locale, t("companyName"), meta("description"))} />
+        <JsonLd data={[organizationLd(locale, t("companyName"), meta("description")), websiteLd(locale, t("companyName"))]} />
         <NextIntlClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <DirectionProvider dir={dir}>

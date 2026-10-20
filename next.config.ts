@@ -52,6 +52,11 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:locale(en|ar).md", destination: "/api/md/:locale" },
       { source: "/:locale(en|ar)/:path(.+)\.md", destination: "/api/md/:locale/:path" },
+      // Open Graph cards (app/api/og), outside /api/ so crawlers that obey robots.txt can fetch them.
+      { source: "/og/:locale(en|ar).png", destination: "/api/og/:locale" },
+      { source: "/og/:locale(en|ar)/:path(.+)\.png", destination: "/api/og/:locale/:path" },
+      // IndexNow key file (app/api/indexnow) at the site root. Hex and dashes only, so it cannot shadow llms.txt or robots.txt.
+      { source: "/:key([0-9a-fA-F-]{8,128}).txt", destination: "/api/indexnow/:key" },
     ];
   },
   async headers() {
