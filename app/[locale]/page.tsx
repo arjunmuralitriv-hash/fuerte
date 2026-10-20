@@ -64,10 +64,11 @@ export default async function HomePage({ params }: Params) {
 
       {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero waits for the scene (Reveal). */}
       <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">
-        {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. */}
+        {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. It runs on
+            past the hero and fades out there, so it never ends in a hard edge over the film. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
+          className="pointer-events-none absolute inset-x-0 top-0 -bottom-32 -z-10 mask-b-from-75% bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
         />
         <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
           <p className="eyebrow flex items-center gap-3 text-muted-foreground">
