@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "node scripts/content-check.mjs --launch && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "content:sync": "node scripts/sync-content.mjs"
+    "content:sync": "node scripts/sync-content.mjs",
+    "content:check": "node scripts/content-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
