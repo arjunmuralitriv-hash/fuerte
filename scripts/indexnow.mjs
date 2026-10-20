@@ -49,30 +49,35 @@ function changedPages(since) {
   });
 }
 
-const sitemap = await fetch(args.sitemap ?? new URL("/sitemap.xml", site)).then((r) => (r.ok ? r.text() : fail(`sitemap.xml: HTTP ${r.status}`)));
-const listed = new Set([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]));
-// Changed pages must be live (in the sitemap); a deleted page is sent too, so engines re-crawl it and drop it.
-const urlList = args.all
-  ? [...listed]
-  : [...new Set(changedPages(args.since).filter((p) => p.deleted || listed.has(p.url)).map((p) => p.url))];
+// Normal paths return instead of calling process.exit(), which can abort on Windows while a fetch socket is still open.
+async function main() {
+  const sitemap = await fetch(args.sitemap ?? new URL("/sitemap.xml", site)).then((r) => (r.ok ? r.text() : fail(`sitemap.xml: HTTP ${r.status}`)));
+  const listed = new Set([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]));
+  // Changed pages must be live (in the sitemap); a deleted page is sent too, so engines re-crawl it and drop it.
+  const urlList = args.all
+    ? [...listed]
+    : [...new Set(changedPages(args.since).filter((p) => p.deleted || listed.has(p.url)).map((p) => p.url))];
 
-if (!urlList.length) {
-  console.log("Nothing to send.");
-  process.exit(0);
+  if (!urlList.length) {
+    console.log("Nothing to send.");
+    return;
+  }
+  const body = { host: site.host, key, keyLocation: new URL(`/${key}.txt`, site).toString(), urlList: urlList.slice(0, 10000) };
+  console.log(`${urlList.length} URL(s):\n${urlList.join("\n")}`);
+
+  if (!args.submit) {
+    console.log("\nDry run. Add --submit to send to", ENDPOINT);
+    return;
+  }
+
+  // The engines verify the key at keyLocation; check it first so a key missing on the host fails here, not silently.
+  const served = await fetch(body.keyLocation).then((r) => (r.ok ? r.text() : ""));
+  if (served.trim() !== key) fail(`${body.keyLocation} does not serve the key. Set INDEXNOW_KEY on the host and redeploy.`);
+
+  const res = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json; charset=utf-8" }, body: JSON.stringify(body) });
+  // 200 OK and 202 Accepted are success; 403 = key not valid, 422 = URLs not on this host, 429 = too many requests.
+  console.log(`IndexNow: HTTP ${res.status} ${res.statusText}`);
+  if (!res.ok) process.exitCode = 1;
 }
-const body = { host: site.host, key, keyLocation: new URL(`/${key}.txt`, site).toString(), urlList: urlList.slice(0, 10000) };
-console.log(`${urlList.length} URL(s):\n${urlList.join("\n")}`);
 
-if (!args.submit) {
-  console.log("\nDry run. Add --submit to send to", ENDPOINT);
-  process.exit(0);
-}
-
-// The engines verify the key at keyLocation; check it first so a key missing on the host fails here, not silently.
-const served = await fetch(body.keyLocation).then((r) => (r.ok ? r.text() : ""));
-if (served.trim() !== key) fail(`${body.keyLocation} does not serve the key. Set INDEXNOW_KEY on the host and redeploy.`);
-
-const res = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json; charset=utf-8" }, body: JSON.stringify(body) });
-// 200 OK and 202 Accepted are success; 403 = key not valid, 422 = URLs not on this host, 429 = too many requests.
-console.log(`IndexNow: HTTP ${res.status} ${res.statusText}`);
-if (!res.ok) process.exit(1);
+await main();
