@@ -47,6 +47,9 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:locale(en|ar).md", destination: "/api/md/:locale" },
       { source: "/:locale(en|ar)/:path(.+)\.md", destination: "/api/md/:locale/:path" },
+      // Open Graph cards (app/api/og), outside /api/ so crawlers that obey robots.txt can fetch them.
+      { source: "/og/:locale(en|ar).png", destination: "/api/og/:locale" },
+      { source: "/og/:locale(en|ar)/:path(.+)\.png", destination: "/api/og/:locale/:path" },
     ];
   },
   async headers() {

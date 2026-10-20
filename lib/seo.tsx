@@ -6,10 +6,13 @@ import { SITE } from "@/lib/site";
 /** Path for a canonical slug in a locale: "/" → "/en", "/services" → "/en/services". */
 export const localePath = (locale: string, slug: string) => `/${locale}${slug === "/" ? "" : slug}`;
 export const absoluteUrl = (path: string) => new URL(path, SITE.url).toString();
+/** Open Graph card for a page (app/api/og): /og/en.png, /og/ar/services/cctv.png. */
+export const ogImagePath = (locale: string, slug: string) => `/og${localePath(locale, slug)}.png`;
 
 /** Per-page metadata: unique title and description, self-referencing canonical, hreflang pair, Open Graph. */
 export function pageMetadata({ locale, slug, title, description }: { locale: Locale; slug: string; title: string; description: string }): Metadata {
   const languages = Object.fromEntries(routing.locales.map((l) => [l, localePath(l, slug)]));
+  const images = [{ url: ogImagePath(locale, slug), width: 1200, height: 630, alt: title, type: "image/png" }];
   return {
     title: { absolute: title },
     description,
@@ -27,8 +30,9 @@ export function pageMetadata({ locale, slug, title, description }: { locale: Loc
       siteName: "Fuerte Technologies & Contracting Services",
       locale: locale === "ar" ? "ar_QA" : "en_QA",
       alternateLocale: locale === "ar" ? "en_QA" : "ar_QA",
+      images,
     },
-    twitter: { card: "summary_large_image", title, description },
+    twitter: { card: "summary_large_image", title, description, images },
   };
 }
 
