@@ -98,7 +98,7 @@ export default async function HomePage({ params }: Params) {
           <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
             {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
             <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
-              <Reveal className="w-full max-w-xl">
+              <Reveal beat={n} className="w-full max-w-xl">
                 <div className="rounded-3xl border bg-background/80 p-5 backdrop-blur-md md:p-8 dark:bg-background/70">
                   <p className="eyebrow font-mono text-primary-ink">{beat.eyebrow}</p>
                   <h2 id={`beat-${n}-title`} className="mt-3 text-h2">
