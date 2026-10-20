@@ -13,6 +13,11 @@ export type Frontmatter = {
   primaryKeyword: string;
   secondaryKeywords?: string[];
   pillar?: string;
+  /** Article byline, for insights. Left out of structured data while missing or a placeholder. */
+  author?: string | { name: string; jobTitle?: string; url?: string };
+  /** ISO dates (YAML may parse them to Date). */
+  datePublished?: string | Date;
+  dateModified?: string | Date;
 };
 
 export type Section = "home" | "services" | "industries" | "insights" | "legal" | "page";
@@ -117,6 +122,14 @@ export function getSectionPages(locale: Locale, section: Section): Page[] {
     .sort((a, b) => a.h1.localeCompare(b.h1, locale));
 }
 
+/** A pillar's sub-service pages (front-matter `pillar`), in file order. The pillar page itself is not one. */
+export function getPillarServices(locale: Locale, pillar: string): Page[] {
+  return getAllSlugs()
+    .filter((slug) => slug !== `/services/${pillar}`)
+    .map((slug) => getPage(locale, slug)!)
+    .filter((p) => p.fm.pillar === pillar);
+}
+
 /** Stable heading id for anchors and the table of contents; keeps Arabic letters. */
 export function headingId(text: string) {
   return text
@@ -168,4 +181,47 @@ export function toPlain(markdown: string) {
 
 export function hasPlaceholder(text: string) {
   return PLACEHOLDER.test(text);
+}
+
+const MARK = "⁣"; // invisible separator, never in drafts
+const STEP_HEADING = /^## (?:Step|الخطوة)\s+[\d٠-٩]+\s*[:：]\s*(.+)$/;
+
+/** Plain sentences of a Markdown block, dropping every sentence or list item that holds an unconfirmed placeholder. */
+function confirmedText(lines: string[]) {
+  const out: string[] = [];
+  let list: string[] = [];
+  const flush = () => {
+    if (list.length) out.push(`${list.join(/[؀-ۿ]/.test(list[0]) ? "؛ " : "; ")}.`);
+    list = [];
+  };
+  for (const line of lines) {
+    const item = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/);
+    if (item) {
+      const text = toPlain(item[1]).replace(/[.;]$/, "");
+      if (text && !hasPlaceholder(text)) list.push(text);
+      continue;
+    }
+    flush();
+    // Mark placeholders first so a "." inside one does not split the sentence around it.
+    const marked = toPlain(line.replace(new RegExp(PLACEHOLDER.source, "g"), MARK));
+    out.push(...marked.split(/(?<=[.!?؟])\s+/).filter((s) => s && !s.includes(MARK)));
+  }
+  flush();
+  return out.join(" ");
+}
+
+/** "## Step 1: …" sections of a how-to guide, as name, plain text and heading text, in order. */
+export function getSteps(body: string) {
+  const lines = body.split("\n");
+  const steps: { name: string; text: string; heading: string }[] = [];
+  lines.forEach((line, i) => {
+    const m = line.match(STEP_HEADING);
+    if (!m) return;
+    let end = i + 1;
+    while (end < lines.length && !lines[end].startsWith("## ")) end++;
+    const name = toPlain(m[1]);
+    const text = confirmedText(lines.slice(i + 1, end));
+    if (text && !hasPlaceholder(name)) steps.push({ name, text, heading: line.slice(3).trim() });
+  });
+  return steps;
 }
