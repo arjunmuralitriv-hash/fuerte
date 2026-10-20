@@ -36,7 +36,7 @@ function Value({ text }: { text: string }) {
 }
 
 // One size smaller on phones so the copy stays in the bottom of the screen, clear of the scene.
-const lead = "max-w-prose [&_a]:text-foreground [&_p]:text-body [&_p]:text-muted-foreground md:[&_p]:text-body-lg";
+const lead = "max-w-prose [&_:not(.not-prose)>a]:text-foreground [&_p]:text-body [&_p]:text-muted-foreground md:[&_p]:text-body-lg";
 
 export default async function HomePage({ params }: Params) {
   const { locale: raw } = await params;
