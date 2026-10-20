@@ -5,12 +5,13 @@ import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { Markdown, Placeholder } from "@/components/content/markdown";
-import { HomeScene } from "@/components/sections/home-scene";
 import { Reveal } from "@/components/sections/reveal";
+import { ScrollFilm } from "@/components/sections/scroll-film";
 import { Link } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
 import { getSectionPages, hasPlaceholder } from "@/lib/content";
 import { getHome, showClaim } from "@/lib/content/home";
+import { HOME_FILM } from "@/lib/film";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -58,8 +59,8 @@ export default async function HomePage({ params }: Params) {
 
   return (
     <main id="main" lang={home.contentLocale} dir={home.contentLocale === "ar" ? "rtl" : "ltr"}>
-      {/* The 3D scene is fixed behind the beat sections and reads their data-beat positions (components/three/README.md). */}
-      <HomeScene />
+      {/* The pre-rendered film is fixed behind the beat sections and scrubs to their data-beat positions (lib/film.ts). */}
+      <ScrollFilm manifest={HOME_FILM} />
 
       {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero waits for the scene (Reveal). */}
       <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">

@@ -77,22 +77,32 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
 
     // Load frames with a small concurrency limit, decoding each before it can be drawn (no decode jank on scrub).
     const queue = stills ? [...manifest.beats] : loadOrder(format.count, manifest.beats);
-    const pump = () => {
-      const i = queue.shift();
-      if (i === undefined || disposed) return;
+    const fetchFrame = (i: number) => {
       const img = new Image();
       img.src = frameUrl(format, i);
-      img
+      return img
         .decode()
         .then(() => {
           if (disposed) return;
           frames[i] = img;
           schedule();
         })
-        .catch(() => {})
-        .finally(pump);
+        .catch(() => {});
     };
-    for (let k = 0; k < CONCURRENCY; k++) pump();
+    const pump = () => {
+      const i = queue.shift();
+      if (i === undefined || disposed) return;
+      void fetchFrame(i).finally(pump);
+    };
+    // The opening frame (already preloaded) loads now; the rest wait until the page has loaded and the main thread is
+    // idle, so the film never competes with the page's own resources.
+    const startRest = () => {
+      for (let k = 0; k < CONCURRENCY; k++) pump();
+    };
+    const whenIdle = () => ("requestIdleCallback" in window ? requestIdleCallback(startRest, { timeout: 2000 }) : setTimeout(startRest, 200));
+    void fetchFrame(queue.shift()!);
+    if (document.readyState === "complete") whenIdle();
+    else addEventListener("load", whenIdle, { once: true });
 
     // Scroll position as a continuous beat value: exactly N when section N's centre is at the viewport centre.
     const beatValue = () => {
@@ -164,6 +174,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       cancelAnimationFrame(raf);
       removeEventListener("scroll", schedule);
       removeEventListener("resize", resize);
+      removeEventListener("load", whenIdle);
       delete root.dataset.scene;
     };
   }, [manifest, theme]);
