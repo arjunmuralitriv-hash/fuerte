@@ -5,6 +5,9 @@ import createNextIntlPlugin from "next-intl/plugin";
 const TURNSTILE = "https://challenges.cloudflare.com";
 const ANALYTICS = "https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms https://c.bing.com";
 const LINKEDIN = "https://snap.licdn.com https://px.ads.linkedin.com";
+// Sentry's ingest host, only when a DSN is configured (instrumentation.ts). Speed Insights reports to /_vercel (self).
+const SENTRY_DSN = process.env.SENTRY_DSN ?? "";
+const SENTRY = SENTRY_DSN ? new URL(SENTRY_DSN).origin : "";
 
 // Pages are statically generated, so per-request nonces aren't available: inline scripts are allowed,
 // everything else is an explicit allow-list. Dev mode is left without a CSP (it needs eval).
@@ -14,7 +17,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${ANALYTICS} ${LINKEDIN}`,
   "font-src 'self'",
-  `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}`,
+  `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${SENTRY ? ` ${SENTRY}` : ""}`,
   `frame-src ${TURNSTILE}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -38,6 +41,8 @@ const nextConfig: NextConfig = {
   // Lets parallel dev servers use separate output folders (e.g. NEXT_DIST_DIR=.next-scene).
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // Inlined into server and browser bundles, so the browser SDK can be dropped entirely when it is empty.
+  env: { SENTRY_DSN },
   experimental: {
     // RFQ uploads: up to 25 MB per file (lib/forms/actions.ts), plus form fields.
     serverActions: { bodySizeLimit: "26mb" },

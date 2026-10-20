@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -92,6 +93,8 @@ export default async function LocaleLayout({
             </DirectionProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
+        {/* Cookieless Core Web Vitals (plan section 10); reports to the site's own /_vercel endpoint. */}
+        <SpeedInsights />
       </body>
     </html>
   );
