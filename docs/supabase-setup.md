@@ -13,7 +13,7 @@ The privacy notice's "Transfers outside Qatar" section needs to name India (Mumb
 2. Sign Supabase's DPA from the dashboard (plan section 5, processor agreements).
 3. **Vercel env vars:**
    - `SUPABASE_URL`: Project Settings → API → Project URL.
-   - `SUPABASE_SECRET_KEY`: Project Settings → API Keys → a **secret** key (`sb_secret_…`), or the legacy `service_role` key. **Server only:** never use a `NEXT_PUBLIC_` variable for it.
+   - `SUPABASE_KEY`: Project Settings → API Keys → a **secret** key (`sb_secret_…`), or the legacy `service_role` key. **Server only:** never use a `NEXT_PUBLIC_` variable for it.
 
 ## 2. RFQ file storage (B2)
 
