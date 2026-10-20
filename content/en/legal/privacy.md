@@ -64,9 +64,9 @@ We do not ask for personal data of a special nature (such as health or religious
 
 We share personal data only when needed, and only with providers bound by written agreements to protect it:
 
-- **Website hosting and delivery:** [CONFIRM: e.g. Vercel, Cloudflare]
-- **Database and lead storage:** [CONFIRM: e.g. Supabase (Middle East region) or Microsoft Azure (Qatar Central)]
-- **Email delivery:** [CONFIRM: e.g. Resend]
+- **Website hosting and delivery:** Vercel. The servers that process the forms you send run in Mumbai, India; public pages are delivered through Vercel's global network.
+- **Database, lead storage and uploaded files:** Supabase, in its Mumbai (India) region
+- **Email delivery:** Resend
 - **CRM:** [CONFIRM: Zoho CRM or HubSpot]
 - **Anti-spam:** Cloudflare Turnstile
 - **Analytics and advertising (with consent):** Plausible, Google, Microsoft, LinkedIn
@@ -79,7 +79,7 @@ We do not sell personal data.
 
 ## 5. Transfers outside Qatar
 
-Some providers store or process data outside Qatar. We store enquiry and lead data in [CONFIRM: Qatar or GCC region]. Where data is transferred abroad, we take steps to make sure it stays protected, as the PDPPL requires. [CONFIRM: transfer list and safeguards.]
+We store enquiry and lead data, including files you upload, with Supabase in Mumbai, India. The servers that process the forms you send also run in Mumbai. Other providers may process data in other countries, including the United States: our email provider Resend, for example. Where data is transferred abroad, we take steps to make sure it stays protected, as the PDPPL requires: a written data processing agreement with each provider, encryption of data in transit and at rest, and access limited to authorised staff. [CONFIRM: transfer wording and safeguards with counsel.]
 
 ## 6. How long we keep it
 
