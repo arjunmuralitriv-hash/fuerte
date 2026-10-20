@@ -2,7 +2,7 @@ import { after } from "next/server";
 
 /**
  * Lead delivery. Every channel is optional and configured by environment variables (.env.example):
- * - RESEND_API_KEY + LEADS_EMAIL_TO (+ LEADS_EMAIL_FROM): email to sales, with attachments; auto-reply to the sender
+ * - RESEND_API_KEY + LEADS_EMAIL_TO (+ LEADS_EMAIL_FROM): email to sales, with links to uploaded files; auto-reply to the sender
  * - CRM_WEBHOOK_URL: JSON copy of the lead for Zoho/HubSpot (sent after the response, so users never wait on it)
  * In production at least one channel must be configured, or the submission fails visibly instead of losing the lead.
  */
@@ -15,9 +15,12 @@ export type Lead = {
   replyTo: string;
   fields: Record<string, string | string[]>;
   consent: { text: string; marketing: boolean; at: string };
-  files: File[];
+  files: LeadFile[];
   autoReply?: { subject: string; text: string };
 };
+
+/** An RFQ upload: stored files carry a time-limited read link (lib/forms/uploads.ts); locally only the name is known. */
+export type LeadFile = { name: string; size?: number; url?: string };
 
 export function makeReference(prefix: string) {
   const d = new Date();
@@ -53,11 +56,14 @@ export async function deliverLead(lead: Lead) {
 
   if (!email && !CRM_WEBHOOK_URL) {
     if (process.env.NODE_ENV === "production") throw new Error("No lead delivery channel configured");
-    console.info("[lead:dev]", JSON.stringify({ ...lead, files: lead.files.map((f) => `${f.name} (${f.size} B)`) }, null, 2));
+    console.info("[lead:dev]", JSON.stringify(lead, null, 2));
     return;
   }
 
   if (email) {
+    const files = lead.files
+      .map((f) => `<li>${f.url ? `<a href="${escape(f.url)}">${escape(f.name)}</a>` : escape(f.name)}${f.size ? ` (${(f.size / 1048576).toFixed(1)} MB)` : ""}</li>`)
+      .join("");
     const rows = Object.entries(lead.fields)
       .map(([k, v]) => `<tr><th align="left" style="padding:4px 12px 4px 0">${escape(k)}</th><td>${escape(Array.isArray(v) ? v.join(", ") : v)}</td></tr>`)
       .join("");
@@ -66,10 +72,7 @@ export async function deliverLead(lead: Lead) {
       to: LEADS_EMAIL_TO!.split(","),
       reply_to: lead.replyTo,
       subject: `${lead.subject} [${lead.reference}]`,
-      html: `<h2>${escape(lead.subject)}</h2><p>Reference: <b>${lead.reference}</b> · Locale: ${lead.locale}</p><table>${rows}</table><p>Consent: ${escape(lead.consent.text)} (${lead.consent.at}) · Marketing: ${lead.consent.marketing ? "yes" : "no"}</p>`,
-      attachments: await Promise.all(
-        lead.files.map(async (f) => ({ filename: f.name, content: Buffer.from(await f.arrayBuffer()).toString("base64") })),
-      ),
+      html: `<h2>${escape(lead.subject)}</h2><p>Reference: <b>${lead.reference}</b> · Locale: ${lead.locale}</p><table>${rows}</table>${files ? `<p>Files (links expire after 7 days):</p><ul>${files}</ul>` : ""}<p>Consent: ${escape(lead.consent.text)} (${lead.consent.at}) · Marketing: ${lead.consent.marketing ? "yes" : "no"}</p>`,
     });
   }
 
@@ -78,11 +81,10 @@ export async function deliverLead(lead: Lead) {
       await resend({ from: LEADS_EMAIL_FROM, to: [lead.replyTo], subject: lead.autoReply.subject, text: lead.autoReply.text }).catch(console.error);
     }
     if (CRM_WEBHOOK_URL) {
-      const { files, ...rest } = lead;
       await fetch(CRM_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...rest, files: files.map((f) => f.name) }),
+        body: JSON.stringify(lead),
       }).catch(console.error);
     }
   });
