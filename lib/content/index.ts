@@ -210,6 +210,11 @@ function confirmedText(lines: string[]) {
   return out.join(" ");
 }
 
+/** A Markdown passage as plain text without its unconfirmed sentences (structured data, the knowledge export). */
+export function confirmedPlain(markdown: string) {
+  return confirmedText(markdown.split("\n"));
+}
+
 /** "## Step 1: …" sections of a how-to guide, as name, plain text and heading text, in order. */
 export function getSteps(body: string) {
   const lines = body.split("\n");
