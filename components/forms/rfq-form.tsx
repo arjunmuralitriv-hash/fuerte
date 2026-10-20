@@ -3,14 +3,14 @@
 import { ArrowLeft, ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 
 import { DateField } from "@/components/forms/date-field";
 import { CheckLine, ChoiceCard, controlClass, Field } from "@/components/forms/fields";
 import { ErrorSummary, FailedNotice, SubmitButton, Turnstile, useFormAction } from "@/components/forms/form-shell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { submitRfq } from "@/lib/forms/actions";
+import { prepareUploads, submitRfq } from "@/lib/forms/actions";
 import { whatsappHref } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +46,9 @@ export function RfqForm() {
   const [mode, setMode] = useState(params.get("type") === "quote" ? "quote" : "survey");
   const [services, setServices] = useState<Set<string>>(() => new Set([ALIASES[preset] ?? preset].filter((s) => Object.values(GROUPS).flat().includes(s as never))));
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
-  const { state, formAction, onSubmit, pending } = useFormAction(submitRfq);
+  const { state, formAction, pending } = useFormAction(submitRfq);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFailed, setUploadFailed] = useState(false);
   const serverErrors = state.status === "invalid" ? state.errors : {};
   const errors = { ...serverErrors, ...clientErrors };
   const moved = useRef(false);
@@ -90,6 +92,43 @@ export function RfqForm() {
     return !Object.keys(next).length;
   }
 
+  /** Files go straight to storage first (lib/forms/uploads.ts); the form itself then carries only their names and paths. */
+  async function submit(form: HTMLFormElement) {
+    const data = new FormData(form);
+    const files = data.getAll("files").filter((x): x is File => x instanceof File && x.size > 0);
+    data.delete("files");
+    setUploadFailed(false);
+    if (files.length) {
+      setUploading(true);
+      try {
+        const plan = await prepareUploads(locale, files.map((x) => ({ name: x.name, size: x.size })));
+        if (plan.status === "invalid") {
+          setClientErrors({ files: plan.error });
+          setStep(2);
+          return;
+        }
+        if (plan.status === "failed") throw new Error("upload refused");
+        if (plan.status === "ready") {
+          await Promise.all(
+            plan.targets.map((target, i) =>
+              fetch(target.url, { method: "PUT", headers: { "Content-Type": files[i].type || "application/octet-stream", "x-upsert": "false" }, body: files[i] }).then((r) => {
+                if (!r.ok) throw new Error(`upload ${r.status}`);
+              }),
+            ),
+          );
+        }
+        data.set("uploads", JSON.stringify(files.map((x, i) => ({ name: x.name, path: plan.status === "ready" ? plan.targets[i].path : undefined }))));
+      } catch (error) {
+        console.error("[rfq] upload failed", error);
+        setUploadFailed(true);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+    startTransition(() => formAction(data));
+  }
+
   if (state.status === "success") {
     const ref = state.reference;
     return (
@@ -129,10 +168,10 @@ export function RfqForm() {
           if (validate(step)) setStep(step + 1);
           return;
         }
-        onSubmit(ev);
+        ev.preventDefault();
+        void submit(ev.currentTarget);
       }}
       noValidate
-      encType="multipart/form-data"
       className="rounded-2xl border bg-card p-5 md:p-8"
     >
       <input type="hidden" name="locale" value={locale} />
@@ -147,7 +186,7 @@ export function RfqForm() {
         {t("progress", { step: step + 1, name: t(`steps.${STEPS[step]}`) })}
       </p>
 
-      {state.status === "failed" && (
+      {(state.status === "failed" || uploadFailed) && (
         <div className="mt-6">
           <FailedNotice />
         </div>
@@ -392,7 +431,7 @@ export function RfqForm() {
             <ArrowRight aria-hidden data-icon="inline-end" className="rtl:-scale-x-100" />
           </Button>
         ) : (
-          <SubmitButton pending={pending}>{mode === "quote" ? t("submitQuote") : t("submitSurvey")}</SubmitButton>
+          <SubmitButton pending={pending || uploading}>{mode === "quote" ? t("submitQuote") : t("submitSurvey")}</SubmitButton>
         )}
       </div>
     </form>

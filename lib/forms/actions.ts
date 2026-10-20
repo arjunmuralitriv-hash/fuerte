@@ -4,7 +4,8 @@ import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
 import { routing } from "@/i18n/routing";
-import { deliverLead, makeReference, verifyTurnstile } from "@/lib/forms/deliver";
+import { deliverLead, makeReference, verifyTurnstile, type LeadFile } from "@/lib/forms/deliver";
+import { FILE_TYPES, MAX_FILE, MAX_FILES, promoteUploads, uploadsConfigured, uploadTargets, type UploadTarget } from "@/lib/forms/uploads";
 
 export type FormState =
   | { status: "idle" }
@@ -12,8 +13,6 @@ export type FormState =
   | { status: "failed" }
   | { status: "success"; reference: string; name: string; email: string };
 
-const MAX_FILE = 25 * 1024 * 1024;
-const FILE_TYPES = /\.(pdf|dwg|docx|xlsx|zip)$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
@@ -23,24 +22,49 @@ function validPhone(raw: string) {
   return /^\d{8}$/.test(digits) || /^(\+|00)\d{9,15}$/.test(digits);
 }
 
-async function setup(fd: FormData) {
-  const raw = str(fd, "locale");
+async function setup(fd: FormData, given?: string) {
+  const raw = given ?? str(fd, "locale");
   const locale = hasLocale(routing.locales, raw) ? raw : routing.defaultLocale;
   const t = await getTranslations({ locale, namespace: "forms.errors" });
   return { locale, t };
+}
+
+export type UploadPlan = { status: "ready"; targets: UploadTarget[] } | { status: "local" } | { status: "invalid"; error: string } | { status: "failed" };
+
+/** Step one of an RFQ with files: upload links for the browser (lib/forms/uploads.ts). Locally, without storage, files are only named. */
+export async function prepareUploads(locale: string, files: { name: string; size: number }[]): Promise<UploadPlan> {
+  const { t } = await setup(new FormData(), locale);
+  if (files.length > MAX_FILES) return { status: "failed" };
+  if (files.some((f) => f.size > MAX_FILE)) return { status: "invalid", error: t("fileSize") };
+  if (files.some((f) => !FILE_TYPES.test(f.name))) return { status: "invalid", error: t("fileType") };
+  if (!uploadsConfigured()) return process.env.NODE_ENV === "production" ? { status: "failed" } : { status: "local" };
+  try {
+    return { status: "ready", targets: await uploadTargets(files.map((f) => f.name)) };
+  } catch (error) {
+    console.error("[rfq] upload links failed", error);
+    return { status: "failed" };
+  }
+}
+
+/** The "uploads" field: [{ path, name }] after an upload, or [{ name }] when storage is not configured (local dev). */
+function parseUploads(raw: string): { path?: string; name: string }[] {
+  try {
+    const list = JSON.parse(raw || "[]") as unknown;
+    return Array.isArray(list) ? list.slice(0, MAX_FILES).filter((u) => typeof u?.name === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function submitRfq(_prev: FormState, fd: FormData): Promise<FormState> {
   const { locale, t } = await setup(fd);
   const errors: Record<string, string> = {};
   const services = fd.getAll("services").map(String);
-  const files = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const uploads = parseUploads(str(fd, "uploads"));
 
   if (!services.length) errors.services = t("services");
   if (!str(fd, "siteType")) errors.siteType = t("siteType");
   if (!str(fd, "location")) errors.location = t("location");
-  if (files.some((f) => f.size > MAX_FILE)) errors.files = t("fileSize");
-  else if (files.some((f) => !FILE_TYPES.test(f.name))) errors.files = t("fileType");
   if (!str(fd, "name")) errors.name = t("name");
   if (!str(fd, "organisation")) errors.organisation = t("organisation");
   if (!EMAIL.test(str(fd, "email"))) errors.email = t("email");
@@ -58,6 +82,16 @@ export async function submitRfq(_prev: FormState, fd: FormData): Promise<FormSta
   for (const k of keys) if (str(fd, k)) fields[k] = str(fd, k);
 
   const tr = await getTranslations({ locale, namespace: "rfq" });
+  let files: LeadFile[] = uploads.map((u) => ({ name: u.name }));
+  if (uploadsConfigured() && uploads.length) {
+    const stored = await promoteUploads(reference, uploads.map((u) => ({ path: u.path ?? "", name: u.name }))).catch((error) => {
+      console.error("[rfq] upload check failed", reference, error);
+      return undefined;
+    });
+    if (stored === null) return { status: "invalid", errors: { files: t("fileSize") } };
+    if (!stored) return { status: "failed" };
+    files = stored;
+  }
   try {
     await deliverLead({
       kind: "rfq",

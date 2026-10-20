@@ -1,7 +1,7 @@
 # Fuerte Technologies — Website
 
 High-end bilingual (EN + AR/RTL), light/dark, 3D marketing and sales site for Fuerte Technologies & Contracting Services (Doha, Qatar).
-Approved plan: `C:\Users\arjun\.claude\plans\please-go-through-company-synchronous-hejlsberg.md`. Read it before starting a phase.
+Approved plan: `docs/plan.md` (its "Status" section is the current to-do list). Read it before starting a phase. Cloud sessions: start with `docs/HANDOFF.md`.
 
 ## Stack
 - Next.js 15 App Router, TypeScript strict, Tailwind v4, shadcn/ui (radix-nova, RTL enabled), next-themes.

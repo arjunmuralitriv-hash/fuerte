@@ -8,6 +8,7 @@ export const SITE = {
   // Domain confirmed 19 Oct 2026; "contact@" is the brochure's mailbox on the corrected domain. Privacy/security/support addresses still [CONFIRM].
   email: "contact@fuertetechnologies.com" as string | null,
   crNumber: null as string | null, // [CR NUMBER]
+  hours: null as string | null, // [CONFIRM]: office hours
   geo: { latitude: 25.2685, longitude: 51.5323 }, // Umm Ghuwailina, approximate until the office pin is confirmed
 } as const;
 

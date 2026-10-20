@@ -39,12 +39,6 @@ This page provides the information required by Article 51 of Qatar's Electronic 
 | Qatar Civil Defence Department | [CONFIRM: only if held] | [CONFIRM] |
 | Other | [CONFIRM: any other licence relevant to the services offered] | [CONFIRM] |
 
-Do not show any licence row that Fuerte does not hold.
-
-## Footer summary (shown on every page)
-
-"[CONFIRM: legal name] · CR [CR NUMBER] · 2nd Floor, Al Kazim Building, Umm Ghuwailina, P.O. Box 9044, Doha, Qatar · +974 7125 8588 · contact@fuertetechnologies.com · [Legal information](/legal/legal-information)"
-
 ## Commercial communications
 
 We send marketing emails only to people who have given explicit consent. Each one is clearly marked as a commercial message from Fuerte and includes a one-click unsubscribe link.

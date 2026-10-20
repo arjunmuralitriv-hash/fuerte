@@ -1,14 +1,17 @@
-"""The home page film (Fuerte-3D-Film-Plan.md): one continuous camera move through seven beats over the real West Bay
+"""The home page film (docs/film-plan.md): one continuous camera move through seven beats over the real West Bay
 skyline at blue hour with neon accents. Each beat's composed frame is in BEATS; the scroll-film player sits on it when
 that section is centred and scrubs the transitions in between.
 
-  0 Arrival    glide in over Doha Bay to Fuerte's tower: lit, occupied floors, the red band
+  0 Arrival    glide in over Doha Bay to Fuerte's tower: lit, occupied floors
   1 Spine      holographic scan turns the facade translucent; pulses race up the fibre riser and out along each floor
   2 Data hall  through the glass into floor DH_FLOOR: contained cold aisle, live rack LEDs, cool haze
-  3 Devices    plaza and lobby: CCTV sight-lines, speed gates, video wall, network lines pulsing into the building
+  3 Devices    the command and control room on floor 1: video wall of camera feeds, consoles, ceiling devices
   4 Shield     hexagonal dome blooms up over the tower and deflects incoming threat streaks
   5 City       aerial pull-back with network arcs between West Bay's towers; Lusail and The Pearl on the horizon
   6 Settle     calm night, the tower toward the end side, clean sky for the call to action
+
+Idle loops: "--loop <beats> <dir> <w> <h> <samples>" renders each listed beat's seamless loop (hold_for_loop) into
+<dir>/beat<N>/.
 
 Run (assets dir, output .blend, optional "--theme light|dark" (default dark), "--format landscape|landscape-rtl|portrait"
 (default landscape; landscape-rtl mirrors the composition for Arabic pages; portrait is the phone framing) and
@@ -26,6 +29,7 @@ sea is to the south (-Y).
 """
 import json
 import math
+import os
 import pathlib
 import random
 import sys
@@ -60,7 +64,6 @@ FORMAT = ARGS[ARGS.index("--format") + 1] if "--format" in ARGS else "landscape"
 PORTRAIT = FORMAT == "portrait"
 RTL = FORMAT == "landscape-rtl"  # Arabic pages: copy on the right, so the subject sits on the left
 GLOW = srgb("#FF5A3C" if DARK else "#FF4A2E")  # --glow: 3D emissive
-BRAND_RED = srgb("#D0230C" if DARK else "#BC1704")  # --primary
 LED_WARM, LED_COOL = (1.0, 0.8, 0.58), (0.86, 0.92, 1.0)  # neutral architectural LEDs, about 3000 K and 6500 K
 
 # City (prepare_osm.py coordinates: metres from Doha Tower, X east, Y north)
@@ -382,6 +385,7 @@ def land_and_sea(col):
     wave = node(nt, "ShaderNodeTexWave", (-700, -550))
     wave.inputs["Scale"].default_value = 0.12
     wave.inputs["Distortion"].default_value = 6
+    nt.links.new(m_(nt, "MULTIPLY", seconds(nt), math.pi), wave.inputs["Phase Offset"])
     add = node(nt, "ShaderNodeMath", (-500, -400), operation="ADD")
     bump = node(nt, "ShaderNodeBump", (-300, -400))
     bump.inputs["Strength"].default_value = 0.3
@@ -444,9 +448,9 @@ def fuerte_tower(col, furniture):
         "panel_warm": emission("panel_warm", (1.0, 0.86, 0.68), 9.0),
         "panel_cool": emission("panel_cool", (0.88, 0.94, 1.0), 10.0),
         "panel_dim": emission("panel_dim", (1.0, 0.8, 0.6), 1.6),
-        "red": principled("fuerte_red", BRAND_RED, rough=0.3, metal=0.6, emit=GLOW, strength=6.0),
         "beacon": emission("beacon", GLOW, 80.0),
     }
+    blink(mats["beacon"], 1.0, 0.3)
     for k in ("glass", "spandrel", "mullion", "core"):
         holo(mats[k], FX["scan"])
     n = len(plate())
@@ -521,6 +525,8 @@ def fuerte_tower(col, furniture):
                 p = Vector((gx * 2.8, gy * 2.8, 0))
                 if max(abs(p.x), abs(p.y)) < CORE + 1.5 or max(abs(p.x), abs(p.y)) > reach:
                     continue
+                if i == 1 and p.y < 0:
+                    continue  # the control room (control_room) is kept dim: lit by its video wall and operator light
                 c = rot @ p
                 f = pan.faces.new([pan.verts.new((c.x + dx, c.y + dy, z_ceiling)) for dx, dy in ((-0.6, -0.3), (-0.6, 0.3), (0.6, 0.3), (0.6, -0.3))])
                 f.material_index = mood - 1  # wound so the panel faces down
@@ -538,40 +544,6 @@ def fuerte_tower(col, furniture):
     panels = obj_from_bmesh("fuerte_panels", pan, col, [mats["panel_warm"], mats["panel_cool"], mats["panel_dim"]])
     panels.visible_shadow = False
     instancer("fuerte_workstations", desks, desk_rot, furniture, col)
-
-    # Brand band: a red helix ribbon wrapping the tower one full turn, floor 6 to the roof.
-    rb = bmesh.new()
-    prev = None
-    steps = 220
-    for j in range(steps + 1):
-        t = j / steps
-        fi = 6 + t * (FLOORS - 8)
-        s, tw = level(fi)
-        ang = t * math.tau + tw
-        # Point on the rounded square at angle `ang` (ray cast against the outline).
-        rot = Matrix.Rotation(tw, 3, "Z")
-        pts = [rot @ q for q in plate(s, n=288)]
-        d = Vector((math.cos(ang), math.sin(ang), 0))
-        p = None
-        for a, b in zip(pts, pts[1:] + pts[:1]):
-            # Solve origin + d*r = a + (b - a)*u for r > 0, 0 <= u <= 1.
-            e = b - a
-            den = d.x * e.y - d.y * e.x
-            if abs(den) < 1e-9:
-                continue
-            r = (a.x * e.y - a.y * e.x) / den
-            u = (a.x * d.y - a.y * d.x) / den
-            if r > 0 and 0 <= u <= 1:
-                p = d * r
-                break
-        p = p + d * 0.9
-        z = fi * FLOOR_H
-        pair = [rb.verts.new((p.x, p.y, z - 1.6)), rb.verts.new((p.x, p.y, z + 1.6))]
-        if prev:
-            rb.faces.new((prev[0], pair[0], pair[1], prev[1]))
-        prev = pair
-    band = obj_from_bmesh("fuerte_band", rb, col, [mats["red"]])
-    band.modifiers.new("thick", "SOLIDIFY").thickness = 0.25
 
     # Crown: tapering fins, a mast and a red beacon.
     top = FLOORS * FLOOR_H
@@ -954,6 +926,7 @@ def doha(col):
     roof = mat("roof", lambda: principled("roof", (0.09, 0.09, 0.1), rough=0.7))
     neon = [mat(f"neon{k}", lambda c=c, k=k: emission(f"neon_{k}", c, 14.0)) for k, c in enumerate(NEON)]
     beacon = mat("beacon", lambda: emission("tower_beacon", (1.0, 0.08, 0.04), 40.0))
+    blink(mats[beacon], 1.5, 0.25)
     podium_m = mat("podium", lambda: facade("podium", 3.0, 4.6, (0.96, 0.84), (0.08, 0.08, 0.085), (0.05, 0.05, 0.05), 0.85, warm=0.9, depth=8, strength=2.2))
     crown_m = mat("crown", lambda: facade("crown_louvre", 0.35, 0.5, (0.6, 0.5), (0.18, 0.19, 0.2), (0.02, 0.02, 0.02), 0.0, depth=2))
 
@@ -1191,8 +1164,19 @@ def value(nt, keys, interp="BEZIER", loc=(-1600, -800)):
 
 
 def seconds(nt):
-    """Film time in seconds as a shader input (linear keys, so pulses move at constant speed)."""
-    return value(nt, ((1, 0.0), (FRAMES, (FRAMES - 1) / FPS)), "LINEAR", (-1600, -1000))
+    """Film time in seconds as a shader input (linear keys, so pulses move at constant speed). Labelled "film_time"
+    so loop mode can keep the clock running while everything else holds at a beat."""
+    t = value(nt, ((1, 0.0), (FRAMES, (FRAMES - 1) / FPS)), "LINEAR", (-1600, -1000))
+    t.node.label = "film_time"
+    return t
+
+
+def blink(mat, period, duty, low=0.05):
+    """Make an emission material blink like an aviation light: on for `duty` of every `period` seconds."""
+    nt = mat.node_tree
+    em = next(n for n in nt.nodes if n.type == "EMISSION")
+    on = m_(nt, "LESS_THAN", m_(nt, "FRACT", m_(nt, "DIVIDE", seconds(nt), period)), duty)
+    nt.links.new(m_(nt, "MULTIPLY", m_(nt, "MAXIMUM", on, low), em.inputs["Strength"].default_value), em.inputs["Strength"])
 
 
 def m_(nt, op, *args):
@@ -1373,7 +1357,10 @@ def led_wall(name):
     wn = node(nt, "ShaderNodeTexWhiteNoise", (-700, 200), noise_dimensions="3D")
     nt.links.new(cell.outputs[0], wn.inputs["Vector"])
     dot = m_(nt, "MULTIPLY", m_(nt, "LESS_THAN", m_(nt, "FRACT", cu), 0.22), m_(nt, "LESS_THAN", m_(nt, "ABSOLUTE", m_(nt, "SUBTRACT", m_(nt, "FRACT", cv), 0.5)), 0.12))
-    on = m_(nt, "GREATER_THAN", wn.outputs["Value"], 0.45)
+    # Status lights sit in one bezel column per 0.8 m rack (servers' left edge), not across the whole door.
+    bezel = m_(nt, "FRACT", m_(nt, "DIVIDE", sep.outputs["X"], 0.8))
+    dot = m_(nt, "MULTIPLY", dot, m_(nt, "MULTIPLY", m_(nt, "GREATER_THAN", bezel, 0.06), m_(nt, "LESS_THAN", bezel, 0.26)))
+    on = m_(nt, "GREATER_THAN", wn.outputs["Value"], 0.62)
     ramp = node(nt, "ShaderNodeValToRGB", (-400, 300))
     els = ramp.color_ramp.elements
     els[0].color = (*LED_COOL, 1)
@@ -1387,7 +1374,7 @@ def led_wall(name):
     nt.links.new(sc.outputs[1], ramp.inputs[0])
     em = node(nt, "ShaderNodeEmission", (200, 100))
     nt.links.new(ramp.outputs["Color"], em.inputs["Color"])
-    nt.links.new(m_(nt, "MULTIPLY", m_(nt, "MULTIPLY", dot, on), 9.0), em.inputs["Strength"])
+    nt.links.new(m_(nt, "MULTIPLY", m_(nt, "MULTIPLY", dot, on), 5.0), em.inputs["Strength"])
     tr = node(nt, "ShaderNodeBsdfTransparent", (200, -100))
     mix = node(nt, "ShaderNodeMixShader", (500, 0))
     nt.links.new(m_(nt, "MULTIPLY", dot, on), mix.inputs[0])
@@ -1442,7 +1429,16 @@ def data_hall(col):
         for side in (-1, 1):
             strip(guide, to_world(c + side * (w / 2 - 0.08), y_a, 0.01), to_world(c + side * (w / 2 - 0.08), y_b, 0.01), 0.05, z0 + 0.01)
     obj_from_bmesh("containment", glassy, col, [glass("containment_glass", tint=(0.75, 0.88, 0.95), reflect=0.6)])
-    obj_from_bmesh("aisle_guides", guide, col, [emission("aisle_guide", HOLO, 6.0)]).visible_shadow = False
+    obj_from_bmesh("aisle_guides", guide, col, [emission("aisle_guide", HOLO, 2.5)]).visible_shadow = False
+    # Neutral overhead light down each aisle, so rack doors, cabling and floor tiles read as real equipment.
+    for c, w in ((0.0, 2.8), (-6.08, 2.4), (6.08, 2.4), (-11.96, 2.4), (11.96, 2.4), (-3.14, 1.2), (3.14, 1.2), (-9.0, 1.2), (9.0, 1.2)):
+        light = bpy.data.lights.new(f"aisle_light_{c}", "AREA")
+        light.shape, light.size, light.size_y = "RECTANGLE", w * 0.6, ys[-1] - ys[0]
+        light.energy = 320.0 if w > 2 else 160.0
+        light.color = LED_COOL
+        lo = bpy.data.objects.new(light.name, light)
+        lo.matrix_world = Matrix.LocRotScale(to_world(c, (ys[0] + ys[-1]) / 2, height + 1.1), rot, None)
+        col.objects.link(lo)
     # Fibre glow under each tray, pulsing with the riser.
     under = bmesh.new()
     for x, _ in rows:
@@ -1520,10 +1516,10 @@ def plaza(col):
     f = wall.faces.new([wall.verts.new(p) for p in ((-6.5, -CORE - 0.05, 2.4), (6.5, -CORE - 0.05, 2.4), (6.5, -CORE - 0.05, 7.4), (-6.5, -CORE - 0.05, 7.4))])
     for loop, uv in zip(f.loops, ((0, 0), (1, 0), (1, 1), (0, 1))):
         loop[wuv].uv = uv
-    obj_from_bmesh("video_wall", wall, col, [dashboard("dashboard")])
+    wall.free()
 
     cam_model = join(append_objects(next((pm / "security_camera_01").glob("*.blend")), src), "cctv")
-    cam_model.data.transform(Matrix.Scale(1.6, 4))
+    cam_model.data.transform(Matrix.Scale(3.2, 4))
     planter = join(append_objects(next((pm / "planter_box_01").glob("*.blend")), src), "planter")
 
     cone_m, nt, out = new_material("sight_cone")
@@ -1531,7 +1527,7 @@ def plaza(col):
     sep = node(nt, "ShaderNodeSeparateXYZ", (-1200, 0))
     nt.links.new(uv.outputs[0], sep.inputs[0])
     fade = m_(nt, "POWER", m_(nt, "SUBTRACT", 1.0, sep.outputs["Y"]), 1.6)
-    nt.links.new(glow_over(nt, HOLO, m_(nt, "MULTIPLY", fade, 0.22), value(nt, FX["devices"])), out.inputs["Surface"])
+    nt.links.new(glow_over(nt, HOLO, m_(nt, "MULTIPLY", fade, 0.4), value(nt, FX["devices"])), out.inputs["Surface"])
     net = pulse("device_net", HOLO, "u", speed=14, period=9, gate=FX["devices"], base=0.8, peak=10.0)
 
     cones, lines = bmesh.new(), bmesh.new()
@@ -1572,7 +1568,7 @@ def plaza(col):
         # Network line from the device's foot to the lobby, pulses flowing inward.
         start = base if base is not None else Vector((head.x, head.y, 0))
         strip(lines, start, lobby, 0.28, 0.07, nuv)
-    for ob in (obj_from_bmesh("sight_cones", cones, col, [cone_m]), obj_from_bmesh("device_lines", lines, col, [net])):
+    for ob in (obj_from_bmesh("device_lines", lines, col, [net]),):
         ob.visible_shadow = False
         visible_between(ob, FX["devices"][0][0], FX["devices"][-1][0])
 
@@ -1580,6 +1576,138 @@ def plaza(col):
         a = math.radians(-150 + k * 17)
         r = 30 + (k % 2) * 14
         place(planter, col, (math.cos(a) * r, math.sin(a) * r, 0.04), a + math.pi / 2)
+
+
+def control_room(col):
+    """Floor 1, south side: the command and control centre every ELV system reports to. A video wall of live camera
+    feeds on the core, two rows of operator consoles, and the ceiling devices (dome cameras, Wi-Fi access points,
+    smoke detectors, PA speakers) with their cabling pulsing back to the core. Feeds are stills from this film."""
+    z0 = FLOOR_H + 0.02
+    dark = principled("console", (0.05, 0.055, 0.06), rough=0.45, metal=0.3)
+    white = principled("device_white", (0.85, 0.86, 0.87), rough=0.4)
+    dome = principled("dome_glass", (0.02, 0.02, 0.025), rough=0.08)
+
+    def feed(path):
+        m, nt, out = new_material("feed_" + path.stem)
+        tex = node(nt, "ShaderNodeTexImage", (-600, 0))
+        tex.image = image(path)
+        em = node(nt, "ShaderNodeEmission", (0, 0))
+        em.inputs["Strength"].default_value = 1.6
+        nt.links.new(tex.outputs["Color"], em.inputs["Color"])
+        nt.links.new(em.outputs[0], out.inputs["Surface"])
+        return m
+
+    feeds = [feed(f) for f in sorted((ASSETS / "feeds").glob("*.jpg"))] + [dashboard("dashboard")]
+    # Video wall: 6 x 3 tiles of 16:9 screens on the core's south face, in a black frame.
+    wall, frame = bmesh.new(), bmesh.new()
+    wuv = wall.loops.layers.uv.new("UVMap")
+    tw_, th_, gap = 1.9, 1.07, 0.04
+    y = -CORE - 0.42  # stands proud of the core, in front of the fibre riser
+    for r in range(3):
+        for c in range(6):
+            x0 = (c - 3) * (tw_ + gap) + gap / 2
+            zb = z0 + 0.5 + r * (th_ + gap)
+            f = wall.faces.new([wall.verts.new(v) for v in ((x0, y, zb), (x0 + tw_, y, zb), (x0 + tw_, y, zb + th_), (x0, y, zb + th_))])
+            for loop, uv in zip(f.loops, ((0, 0), (1, 0), (1, 1), (0, 1))):
+                loop[wuv].uv = uv
+            f.material_index = (r * 6 + c * 5) % len(feeds)
+    bmesh.ops.create_cube(frame, size=1, matrix=Matrix.LocRotScale((0, -CORE - 0.36, z0 + 0.45 + 1.65), None, (6 * (tw_ + gap) + 0.2, 0.1, 3 * (th_ + gap) + 0.2)))
+    obj_from_bmesh("video_wall", wall, col, feeds)
+    obj_from_bmesh("video_wall_frame", frame, col, [dark])
+
+    # Operator consoles: two shallow arcs facing the wall, three screens each, chairs behind.
+    cons, screens = bmesh.new(), bmesh.new()
+    suv = screens.loops.layers.uv.new("UVMap")
+    for row, (yc, xs) in enumerate(((-12.6, (-6.3, -2.1, 2.1, 6.3)), (-16.0, (-4.2, 0.0, 4.2)))):
+        for x in xs:
+            rot = Matrix.Rotation(-x * 0.025, 3, "Z")
+
+            def at(dx, dy, dz, rot=rot, x=x, yc=yc):
+                return rot @ Vector((dx, dy, 0)) + Vector((x, yc, z0 + dz))
+
+            bmesh.ops.create_cube(cons, size=1, matrix=Matrix.LocRotScale(at(0, 0, 0.37), rot, (3.6, 0.9, 0.74)))
+            for k in (-1, 0, 1):
+                cx, cy = k * 1.05, 0.28 - abs(k) * 0.12
+                q = [screens.verts.new(at(cx + dx, cy, 0.84 + dz)) for dx, dz in ((-0.46, 0), (0.46, 0), (0.46, 0.52), (-0.46, 0.52))]
+                f = screens.faces.new(q)
+                for loop, uv in zip(f.loops, ((0, 0), (1, 0), (1, 1), (0, 1))):
+                    loop[suv].uv = uv
+                f.material_index = (row + k + int(x)) % 2
+                bmesh.ops.create_cube(cons, size=1, matrix=Matrix.LocRotScale(at(cx, cy + 0.03, 1.1), rot, (0.98, 0.03, 0.6)))
+                bmesh.ops.create_cube(cons, size=1, matrix=Matrix.LocRotScale(at(cx, -0.75, 0.46), rot, (0.48, 0.46, 0.07)))  # seat
+                bmesh.ops.create_cube(cons, size=1, matrix=Matrix.LocRotScale(at(cx, -0.98, 0.78), rot, (0.44, 0.05, 0.46)))  # back
+    obj_from_bmesh("consoles", cons, col, [dark])
+    obj_from_bmesh("console_screens", screens, col, [bpy.data.materials["dashboard"], feeds[0]])
+
+    # Ceiling devices at real-world size, in the camera's view: dome cameras (dark lens bubble on a white base, IR ring),
+    # Wi-Fi access points (white square with a lit status ring), smoke detectors (white, red LED) and PA speakers (round
+    # grille). Each is cabled back to the core with pulsing fibre.
+    zc = 2 * FLOOR_H - 0.42
+    led = emission("device_led", HOLO, 14.0)
+    blink(led, 23 / FPS, 0.5)  # two blinks per beat-3 loop (46 frames), so it closes cleanly
+    ring_light = emission("ap_ring", LED_COOL, 6.0)
+    grille = principled("pa_grille", (0.32, 0.33, 0.34), rough=0.6, metal=0.4)
+    kinds = ("dome", "ap", "smoke", "pa")
+    bm_d, bm_w, bm_g, bm_l, bm_r, cables, bm_h = (bmesh.new() for _ in range(7))
+    cuv = cables.loops.layers.uv.new("UVMap")
+    for i, gx in enumerate((-9.0, -4.5, 0.0, 4.5, 9.0)):
+        for j, gy in enumerate((-10.4, -13.0, -15.6)):
+            kind, p = kinds[(i + 2 * j) % 4], Vector((gx, gy, zc))
+            if kind == "dome":
+                bmesh.ops.create_cone(bm_w, cap_ends=True, segments=32, radius1=0.24, radius2=0.22, depth=0.06, matrix=Matrix.Translation(p - Vector((0, 0, 0.03))))
+                bmesh.ops.create_uvsphere(bm_d, u_segments=24, v_segments=12, radius=0.17, matrix=Matrix.Translation(p - Vector((0, 0, 0.06))))
+                bmesh.ops.create_cone(bm_r, cap_ends=False, segments=32, radius1=0.2, radius2=0.2, depth=0.012, matrix=Matrix.Translation(p - Vector((0, 0, 0.065))))
+            elif kind == "ap":
+                bmesh.ops.create_cube(bm_w, size=1, matrix=Matrix.LocRotScale(p - Vector((0, 0, 0.03)), None, (0.42, 0.42, 0.05)))
+                bmesh.ops.create_cone(bm_r, cap_ends=False, segments=32, radius1=0.1, radius2=0.1, depth=0.012, matrix=Matrix.Translation(p - Vector((0, 0, 0.058))))
+            elif kind == "smoke":
+                bmesh.ops.create_cone(bm_w, cap_ends=True, segments=32, radius1=0.16, radius2=0.12, depth=0.07, matrix=Matrix.Translation(p - Vector((0, 0, 0.035))))
+                bmesh.ops.create_uvsphere(bm_l, u_segments=8, v_segments=4, radius=0.025, matrix=Matrix.Translation(p + Vector((0.07, 0, -0.075))))
+            else:
+                bmesh.ops.create_cone(bm_w, cap_ends=True, segments=32, radius1=0.25, radius2=0.25, depth=0.03, matrix=Matrix.Translation(p - Vector((0, 0, 0.015))))
+                bmesh.ops.create_cone(bm_g, cap_ends=True, segments=32, radius1=0.2, radius2=0.2, depth=0.01, matrix=Matrix.Translation(p - Vector((0, 0, 0.033))))
+            strip(cables, Vector((p.x, p.y)), Vector((p.x, -CORE)), 0.05, zc + 0.03, cuv)
+            bmesh.ops.create_cone(bm_h, cap_ends=False, segments=48, radius1=0.46, radius2=0.46, depth=0.02, matrix=Matrix.Translation(p - Vector((0, 0, 0.09))))
+
+    # On the core beside the video wall, at eye level: fire-alarm call point and sounder-strobe (red), a wall CCTV
+    # camera, a PA wall speaker, and the access-control card reader.
+    fire = principled("fire_red", (0.62, 0.03, 0.02), rough=0.35, emit=GLOW, strength=0.4)
+    strobe = emission("strobe", (1.0, 0.97, 0.94), 20.0)
+    blink(strobe, 46 / FPS, 0.08)
+    bm_f, bm_s = bmesh.new(), bmesh.new()
+    yf = -CORE - 0.05
+    for sx in (-1, 1):
+        x = sx * 7.2
+        bmesh.ops.create_cube(bm_f, size=1, matrix=Matrix.LocRotScale((x, yf - 0.03, z0 + 1.4), None, (0.14, 0.06, 0.14)))  # call point
+        bmesh.ops.create_cube(bm_f, size=1, matrix=Matrix.LocRotScale((x, yf - 0.06, z0 + 2.5), None, (0.16, 0.12, 0.16)))  # sounder
+        bmesh.ops.create_cube(bm_s, size=1, matrix=Matrix.LocRotScale((x, yf - 0.125, z0 + 2.5), None, (0.1, 0.02, 0.1)))  # strobe lens
+        bmesh.ops.create_cube(bm_w, size=1, matrix=Matrix.LocRotScale((x - sx * 0.6, yf - 0.06, z0 + 3.3), None, (0.12, 0.12, 0.08)))  # camera mount
+        bmesh.ops.create_cone(bm_w, cap_ends=True, segments=24, radius1=0.07, radius2=0.075, depth=0.32, matrix=Matrix.LocRotScale((x - sx * 0.6, yf - 0.28, z0 + 3.22), Matrix.Rotation(math.radians(70), 3, "X"), None))  # bullet camera
+        bmesh.ops.create_cube(bm_w, size=1, matrix=Matrix.LocRotScale((x + sx * 0.55, yf - 0.06, z0 + 3.0), None, (0.22, 0.12, 0.3)))  # PA wall speaker
+        bmesh.ops.create_cube(bm_g, size=1, matrix=Matrix.LocRotScale((x + sx * 0.55, yf - 0.125, z0 + 3.0), None, (0.18, 0.01, 0.24)))
+        bmesh.ops.create_cube(bm_w, size=1, matrix=Matrix.LocRotScale((x, yf - 0.03, z0 + 1.15 - 0.45), None, (0.09, 0.04, 0.14)))  # card reader
+        bmesh.ops.create_uvsphere(bm_l, u_segments=8, v_segments=4, radius=0.015, matrix=Matrix.Translation((x, yf - 0.06, z0 + 0.77)))
+        for hx, hz, hr in ((x, 1.4, 0.2), (x, 2.5, 0.22), (x - sx * 0.6, 3.25, 0.26), (x + sx * 0.55, 3.0, 0.28), (x, 0.7, 0.2)):
+            bmesh.ops.create_cone(bm_h, cap_ends=False, segments=48, radius1=hr, radius2=hr, depth=0.02, matrix=Matrix.LocRotScale((hx, yf - 0.2, z0 + hz), Matrix.Rotation(math.pi / 2, 3, "X"), None))
+    obj_from_bmesh("dome_cameras", bm_d, col, [dome])
+    obj_from_bmesh("ceiling_devices", bm_w, col, [white])
+    obj_from_bmesh("speaker_grilles", bm_g, col, [grille])
+    obj_from_bmesh("device_rings", bm_r, col, [ring_light]).visible_shadow = False
+    obj_from_bmesh("device_leds", bm_l, col, [led]).visible_shadow = False
+    obj_from_bmesh("fire_devices", bm_f, col, [fire])
+    obj_from_bmesh("strobes", bm_s, col, [strobe]).visible_shadow = False
+    obj_from_bmesh("device_cabling", cables, col, [bpy.data.materials["device_net"]]).visible_shadow = False
+    # Highlight: a red ring around every device, breathing while the ELV beat is on screen.
+    highlight = pulse("device_highlight", HOLO, "u", speed=1.0, period=46 / FPS, gate=FX["devices"], base=1.5, peak=14.0, sharp=3.0)  # one breath per beat-3 loop
+    hl = obj_from_bmesh("device_highlights", bm_h, col, [highlight])
+    hl.visible_shadow = False
+    visible_between(hl, FX["devices"][0][0], FX["devices"][-1][0])
+    # Soft operator lighting; the wall itself lights the room.
+    light = bpy.data.lights.new("ccc_light", "AREA")
+    light.shape, light.size, light.size_y, light.energy, light.color = "RECTANGLE", 14.0, 6.0, 260.0, LED_COOL
+    lo = bpy.data.objects.new("ccc_light", light)
+    lo.location = (0, -14.3, zc - 0.1)
+    col.objects.link(lo)
 
 
 # --------------------------------------------------------------------------------------------- beat 4: the shield
@@ -1590,7 +1718,8 @@ def shield_material(name, strength, rim):
     wave = value(nt, FX["wave"], "LINEAR")
     shown = m_(nt, "LESS_THAN", z, wave)
     front = m_(nt, "MULTIPLY", m_(nt, "LESS_THAN", m_(nt, "ABSOLUTE", m_(nt, "SUBTRACT", z, m_(nt, "SUBTRACT", wave, 5.0))), 5.0), 6.0)
-    s = m_(nt, "ADD", m_(nt, "MULTIPLY", shown, strength), front)
+    ripple = m_(nt, "POWER", m_(nt, "FRACT", m_(nt, "ADD", m_(nt, "DIVIDE", z, 90.0), m_(nt, "MULTIPLY", seconds(nt), 0.5))), 12.0)
+    s = m_(nt, "ADD", m_(nt, "MULTIPLY", shown, m_(nt, "MULTIPLY_ADD", ripple, strength * 2.5, strength)), front)
     if rim:
         lw = node(nt, "ShaderNodeLayerWeight", (-400, -900))
         lw.inputs["Blend"].default_value = 0.3
@@ -1772,7 +1901,7 @@ def camera(scene, col):
     aisle = lambda d, dz=0.0, x=0.0: tuple(Matrix.Rotation(tw, 3, "Z") @ Vector((x, -d, 0)) + Vector((0, 0, DH_FLOOR * FLOOR_H + 1.95 + dz)))
     # Shots are (frame, camera, subject, offset, lens). Landscape (desktop) aims at subject + offset: a little to the start
     # side, so the subject sits toward the end side clear of the copy. Portrait (phones) aims at the subject itself and a
-    # lens shift lifts it into the upper 60% of the frame, above the copy at the bottom (Fuerte-3D-Film-Plan.md).
+    # lens shift lifts it into the upper 60% of the frame, above the copy at the bottom (docs/film-plan.md).
     o = (0, 0, 0)
     shots = (
         (1, (-60, -1250, 14), (0, 0, 120), (-330, 0, 0), 28),  # 0 arrival: wide skyline
@@ -1780,20 +1909,26 @@ def camera(scene, col):
         (140, (-330, -300, 150), (0, 0, 178), (-80, 89, 0), 28),  # 1 spine: three-quarter view of the whole tower
         (176, (-40, -75, 84), aisle(0, -1.0), o, 26),
         (196, aisle(34, 0.5), aisle(0), o, 22),  # lining up with the aisle outside the glass
-        (215, aisle(18.6), aisle(6, -0.4), "aisle", 20),  # 2 data hall: just inside the containment
-        (238, aisle(15.5), aisle(6, -0.4), "aisle", 20),
+        (215, aisle(25), aisle(6, -0.4), "aisle", 18),  # 2 data hall: the hall and its contained aisle, from the glass
+        (238, aisle(22.5), aisle(6, -0.4), "aisle", 18),
         (254, aisle(36), aisle(0), o, 22),  # straight back out through the glass, aim level
-        (275, (16, -74, 26), (0, -14, 10), o, 24),  # sweep down outside toward the plaza
-        (295, (24, -50, 3.6), (0, -14, 6.5), (-8, -5.5, 0), 24),  # 3 devices: plaza level, lobby through the glass
-        (320, (30, -58, 4.5), (0, -14, 7), (-8, -6, 0), 24),
+        (275, (14, -70, 18), (0, -20, 6), o, 24),  # sweep down outside toward the floor-1 glass
+        (295, (-3.5, -20.6, 6.3), (1.2, -8.6, 6.0), (-2.4, 0, 0), 22),  # 3 devices: the command and control room
+        (320, (-2.9, -19.2, 6.2), (1.2, -8.6, 6.0), (-2.4, 0, 0), 22),
+        (340, (-6, -34, 10), (0, -8, 8), o, 24),  # back out through the glass
         (375, (-300, -650, 165), (0, 0, 165), (-136, 63, 0), 28),  # 4 shield: the whole sphere
         (398, (-325, -690, 180), (0, 0, 165), (-136, 63, 0), 28),
-        (460, (-650, -1650, 980), (350, 900, 40), o, 24),  # 5 city: aerial over the bay, Lusail beyond
-        (492, (-600, -1550, 920), (350, 900, 40), o, 24),
+        (460, (-430, -1080, 560), (300, 700, 40), o, 26),  # 5 city: aerial over the bay, Lusail beyond
+        (492, (-400, -1020, 530), (300, 700, 40), o, 26),
         (528, (-430, -900, 60), (0, 0, 150), (-250, 0, 0), 35),  # 6 settle: tower to the end side, sky for the CTA
     )
     if PORTRAIT:
         cam_data.shift_y = -0.12
+    # The city beat is the darkest shot: lift the exposure while it is on screen (constant across its idle loop).
+    lift = 0.8 if DARK else 0.4
+    for f, ev in ((418, 0.0), (448, lift), (506, lift), (526, 0.0)):
+        scene.view_settings.exposure = ev
+        scene.view_settings.keyframe_insert("exposure", frame=f)
     for f, loc, subject, offset, lens in shots:
         if PORTRAIT:
             aim = subject
@@ -1832,6 +1967,7 @@ def build():
     spine(set_col)
     data_hall(set_col)
     plaza(set_col)
+    control_room(set_col)
     shield(set_col)
     arcs(set_col)
     atmosphere(set_col)
@@ -1843,14 +1979,52 @@ def build():
     return scene
 
 
-def render(scene, out_dir, w, h, samples, frames):
+# Idle loop length per beat, in frames: a whole number of the beat's main pulse cycles, so the loop closes cleanly.
+LOOP_FRAMES = (48, 50, 50, 46, 48, 39, 48)
+
+
+def hold_for_loop(scene, beat):
+    """Freeze everything at the beat's composed frame (camera, effect switches, visibility) except the film clock,
+    which keeps running from that frame's time: the beat comes alive (pulses, LEDs, ripples, beacons) while the shot
+    holds still. The loop's first frame is the film's beat frame."""
+    f0, length = BEATS[beat], LOOP_FRAMES[beat]
+    scene.frame_set(f0)
+    for ob in scene.objects:
+        if ob.name.startswith(("threat_", "impact_")):
+            ob.animation_data_clear()
+            ob.hide_render = True  # streaks are part of the move, not the idle loop
+        elif ob.animation_data:
+            ob.animation_data_clear()
+    for data in list(bpy.data.cameras):
+        data.animation_data_clear()
+    scene.animation_data_clear()  # exposure holds at the beat's value
+    trees = [m.node_tree for m in bpy.data.materials if m.node_tree] + [w.node_tree for w in bpy.data.worlds if w.node_tree]
+    for tree in trees:
+        clocks = [n for n in tree.nodes if n.label == "film_time"]
+        if tree.animation_data:
+            tree.animation_data_clear()
+        for n in clocks:
+            keyed(n.outputs[0], "default_value", ((f0, (f0 - 1) / FPS), (f0 + length, (f0 - 1 + length) / FPS)), "LINEAR")
+    return range(f0, f0 + length)
+
+
+def render(scene, out_dir, w, h, samples, frames, resume=False):
+    """Render frames to out_dir/film_NNNN.png. With resume, frames already on disk are skipped and each frame is
+    written under a temporary name first, so a crash (e.g. a GPU fault) never leaves a half-written frame behind."""
     scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = w, h, 100
     scene.cycles.samples = samples
     scene.render.image_settings.file_format = "PNG"
     for f in frames:
+        final = pathlib.Path(out_dir) / f"film_{f:04d}.png"
+        if resume and final.exists():
+            print("SKIPPED", f, flush=True)
+            continue
         scene.frame_set(f)
-        scene.render.filepath = str(pathlib.Path(out_dir) / f"film_{f:04d}.png")
+        part = final.with_name(f"part_{f:04d}.png") if resume else final
+        scene.render.filepath = str(part)
         bpy.ops.render.render(write_still=True)
+        if part != final:
+            os.replace(part, final)
         print("RENDERED", f, flush=True)
 
 
@@ -1868,4 +2042,17 @@ if __name__ == "__main__":
                 picked += range(a, b + 1, int(step or 1))
             else:
                 picked.append(int(part))
-        render(sc, out_dir, w, h, samples, picked)
+        render(sc, out_dir, w, h, samples, picked, resume=True)
+    if "--loop" in ARGS:
+        # --loop <beats> <dir> <w> <h> <samples>: idle loops as PNG frames in <dir>/beat<N>/, beats like "0,1,2".
+        # Each beat starts from the saved .blend, since holding a beat strips the film's animation.
+        i = ARGS.index("--loop")
+        beats, out_dir, w, h, samples = ARGS[i + 1], ARGS[i + 2], int(ARGS[i + 3]), int(ARGS[i + 4]), int(ARGS[i + 5])
+        for n in (int(x) for x in beats.split(",")):
+            bpy.ops.wm.open_mainfile(filepath=str(OUT))
+            sc = bpy.context.scene
+            sc.render.use_persistent_data = True  # only the clock changes between loop frames
+            beat_dir = pathlib.Path(out_dir) / f"beat{n}"
+            beat_dir.mkdir(parents=True, exist_ok=True)
+            render(sc, beat_dir, w, h, samples, hold_for_loop(sc, n), resume=True)
+            print("LOOP DONE", n, flush=True)

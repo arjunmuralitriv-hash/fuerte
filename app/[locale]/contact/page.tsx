@@ -115,7 +115,7 @@ export default async function ContactPage({ params }: Params) {
                   {t("hours")}
                 </dt>
                 <dd className="mt-1">
-                  <Placeholder>CONFIRM office hours</Placeholder>
+                  {SITE.hours ?? <Placeholder>CONFIRM office hours</Placeholder>}
                 </dd>
               </div>
             </dl>

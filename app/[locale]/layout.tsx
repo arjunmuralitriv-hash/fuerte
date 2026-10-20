@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -11,7 +12,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DirectionProvider } from "@/components/ui/direction";
 import { routing } from "@/i18n/routing";
-import { JsonLd, organizationLd } from "@/lib/seo";
+import { JsonLd, organizationLd, websiteLd } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 import "../globals.css";
 
@@ -74,7 +75,7 @@ export default async function LocaleLayout({
       className={`${latin.variable} ${arabic.variable} ${mono.variable}`}
     >
       <body className="min-h-dvh pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-        <JsonLd data={organizationLd(locale, t("companyName"), meta("description"))} />
+        <JsonLd data={[organizationLd(locale, t("companyName"), meta("description")), websiteLd(locale, t("companyName"))]} />
         <NextIntlClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <DirectionProvider dir={dir}>
@@ -92,6 +93,8 @@ export default async function LocaleLayout({
             </DirectionProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
+        {/* Cookieless Core Web Vitals (plan section 10); reports to the site's own /_vercel endpoint. */}
+        <SpeedInsights />
       </body>
     </html>
   );

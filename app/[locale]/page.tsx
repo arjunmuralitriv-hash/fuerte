@@ -11,7 +11,7 @@ import { Link } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
 import { getSectionPages, hasPlaceholder } from "@/lib/content";
 import { getHome, showClaim } from "@/lib/content/home";
-import { HOME_FILM } from "@/lib/film";
+import { homeFilm } from "@/lib/film";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,7 @@ function Value({ text }: { text: string }) {
 }
 
 // One size smaller on phones so the copy stays in the bottom of the screen, clear of the scene.
-const lead = "max-w-prose [&_a]:text-foreground [&_p]:text-body [&_p]:text-muted-foreground md:[&_p]:text-body-lg";
+const lead = "max-w-prose [&_:not(.not-prose)>a]:text-foreground [&_p]:text-body [&_p]:text-muted-foreground md:[&_p]:text-body-lg";
 
 export default async function HomePage({ params }: Params) {
   const { locale: raw } = await params;
@@ -60,14 +60,15 @@ export default async function HomePage({ params }: Params) {
   return (
     <main id="main" lang={home.contentLocale} dir={home.contentLocale === "ar" ? "rtl" : "ltr"}>
       {/* The pre-rendered film is fixed behind the beat sections and scrubs to their data-beat positions (lib/film.ts). */}
-      <ScrollFilm manifest={HOME_FILM} />
+      <ScrollFilm manifest={homeFilm()} />
 
       {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero waits for the scene (Reveal). */}
       <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">
-        {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. */}
+        {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. It runs on
+            past the hero and fades out there, so it never ends in a hard edge over the film. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
+          className="pointer-events-none absolute inset-x-0 top-0 -bottom-32 -z-10 mask-b-from-75% bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
         />
         <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
           <p className="eyebrow flex items-center gap-3 text-muted-foreground">
@@ -98,7 +99,7 @@ export default async function HomePage({ params }: Params) {
           <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
             {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
             <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
-              <Reveal className="w-full max-w-xl">
+              <Reveal beat={n} className="w-full max-w-xl">
                 <div className="rounded-3xl border bg-background/80 p-5 backdrop-blur-md md:p-8 dark:bg-background/70">
                   <p className="eyebrow font-mono text-primary-ink">{beat.eyebrow}</p>
                   <h2 id={`beat-${n}-title`} className="mt-3 text-h2">
