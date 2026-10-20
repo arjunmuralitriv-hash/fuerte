@@ -2,7 +2,8 @@
 // - content/<locale>/**/*.md: [CONFIRM: …], [PLACEHOLDER: …], [EMAIL], [CR NUMBER] (same pattern as lib/content/prepare.ts)
 // - lib/site.ts: company facts still null, which the footer and contact page show as marks
 // Usage: npm run content:check            lists them and fails if any remain
-//        node scripts/content-check.mjs --launch   (in `npm run build`) fails only for a production deploy
+//        node scripts/content-check.mjs --launch   (in `npm run build`) fails only when CONTENT_GATE=on, which is set
+//        in Vercel at launch; until then production deploys build, with the marks hidden (components/content/markdown.tsx)
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,8 +27,8 @@ scan(join(root, "lib/site.ts"), (line) => {
 });
 
 const launch = process.argv.includes("--launch");
-if (launch && process.env.VERCEL_ENV !== "production") {
-  if (found.length) console.log(`content:check: ${found.length} unresolved marker(s); allowed outside production (npm run content:check lists them).`);
+if (launch && process.env.CONTENT_GATE !== "on") {
+  if (found.length) console.log(`content:check: ${found.length} unresolved marker(s); allowed until CONTENT_GATE=on (npm run content:check lists them).`);
 } else if (found.length) {
   console.error(`${found.join("\n")}\n\ncontent:check: ${found.length} unresolved marker(s). Resolve them before launch (docs/content-placeholders.md).`);
   process.exitCode = 1;
