@@ -24,6 +24,12 @@ Read this file first, then `docs/plan.md` (the approved plan; its first section,
   Review it, merge it into `english-pages`, and rerun lint, typecheck and build.
 - **`main`** is behind. Don't push to `main`; open PRs into `english-pages` unless the user says otherwise.
 
+**Film status when this session starts.**
+- The v2 film (528 frames per cut, 42 idle loops) is still rendering on the user's laptop, with an ETA of about Thursday 22 Oct.
+- Until then, `public/film/**` on GitHub holds the v1 render (180 frames, no loops). `lib/film.ts` detects v1 or v2 per cut automatically.
+- The laptop will push the v2 frames and loops to `english-pages` later.
+- **Do not edit, re-encode or delete `public/film/**`.** Pull `english-pages` before opening each PR.
+
 ## What is left (in order)
 
 Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
