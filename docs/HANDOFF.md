@@ -67,7 +67,7 @@ Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
    - B1: hide the `[CONFIRM]`/`[PLACEHOLDER]`/`[CR NUMBER]` markers in production, add a `content:check` launch gate, and remove the internal notes published in `content/*/legal/legal-information.md`.
    - B3: Turnstile must fail closed in production.
 5. **B2:** RFQ uploads are capped at 25 MB, but Vercel rejects request bodies over 4.5 MB. Upload straight to storage and email a link. **Ask the user:** Vercel Blob, a GCC-region bucket, or Cloudflare R2 (see the Cloudflare section). These files are personal data under the PDPPL, so prefer a GCC-region store for them even if the film media goes to R2.
-6. **B4:** durable lead storage in a GCC region, stored first and then synced to email and CRM, plus the 24-month retention job. **Ask the user:** Supabase (Middle East) or Azure Qatar Central?
+6. **B4:** durable lead storage in a GCC region, stored first and then synced to email and CRM, plus the 24-month retention job. **Decided 2026-10-20:** Supabase in Mumbai (`ap-south-1`); Supabase has no Gulf region.
 7. **B5:**
    - UTM/source capture
    - lead scoring and routing
