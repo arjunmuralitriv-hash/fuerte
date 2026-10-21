@@ -7,6 +7,7 @@ import { startTransition, useEffect, useRef, useState } from "react";
 
 import { DateField } from "@/components/forms/date-field";
 import { CheckLine, ChoiceCard, controlClass, Field } from "@/components/forms/fields";
+import { SOURCE_KEY } from "@/components/layout/source-capture";
 import { ErrorSummary, FailedNotice, SubmitButton, Turnstile, useFormAction } from "@/components/forms/form-shell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -97,6 +98,9 @@ export function RfqForm() {
     const data = new FormData(form);
     const files = data.getAll("files").filter((x): x is File => x instanceof File && x.size > 0);
     data.delete("files");
+    try {
+      data.set("source", sessionStorage.getItem(SOURCE_KEY) ?? "");
+    } catch {}
     setUploadFailed(false);
     if (files.length) {
       setUploading(true);

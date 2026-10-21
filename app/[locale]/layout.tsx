@@ -9,6 +9,7 @@ import { ConsentManager } from "@/components/consent/consent-manager";
 import { MobileCtaBar } from "@/components/layout/mobile-cta-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SourceCapture } from "@/components/layout/source-capture";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DirectionProvider } from "@/components/ui/direction";
 import { routing } from "@/i18n/routing";
@@ -90,6 +91,7 @@ export default async function LocaleLayout({
               <SiteFooter />
               <MobileCtaBar />
               <ConsentManager />
+              <SourceCapture />
             </DirectionProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

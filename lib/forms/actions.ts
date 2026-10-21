@@ -3,8 +3,10 @@
 import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
-import { routing } from "@/i18n/routing";
+import { routing, type Locale } from "@/i18n/routing";
+import { getPage, PILLARS } from "@/lib/content";
 import { deliverLead, makeReference, verifyTurnstile, type LeadFile } from "@/lib/forms/deliver";
+import { scoreRfq } from "@/lib/forms/score";
 import { FILE_TYPES, MAX_FILE, MAX_FILES, promoteUploads, uploadsConfigured, uploadTargets, type UploadTarget } from "@/lib/forms/uploads";
 
 export type FormState =
@@ -56,6 +58,29 @@ function parseUploads(raw: string): { path?: string; name: string }[] {
   }
 }
 
+const SOURCE_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "referrer", "landing"];
+
+/** The "source" field (components/layout/source-capture.tsx): known keys only, short strings only. */
+function parseSource(raw: string) {
+  try {
+    const data = JSON.parse(raw || "{}") as Record<string, unknown>;
+    const source = Object.fromEntries(SOURCE_KEYS.filter((k) => typeof data[k] === "string" && data[k]).map((k) => [k, (data[k] as string).slice(0, 200)]));
+    return Object.keys(source).length ? source : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Pillars of the chosen services (a pillar key itself, or a sub-service's front-matter pillar), for routing. */
+function pillarsOf(locale: Locale, services: string[]) {
+  const set = new Set<string>();
+  for (const s of services) {
+    const pillar = (PILLARS as readonly string[]).includes(s) ? s : getPage(locale, `/services/${s}`)?.fm.pillar;
+    if (pillar) set.add(pillar);
+  }
+  return [...set];
+}
+
 export async function submitRfq(_prev: FormState, fd: FormData): Promise<FormState> {
   const { locale, t } = await setup(fd);
   const errors: Record<string, string> = {};
@@ -82,6 +107,9 @@ export async function submitRfq(_prev: FormState, fd: FormData): Promise<FormSta
   for (const k of keys) if (str(fd, k)) fields[k] = str(fd, k);
 
   const tr = await getTranslations({ locale, namespace: "rfq" });
+  // The auto-reply goes out in the language the visitor chose on the form, which can differ from the page's.
+  const replyLocale = hasLocale(routing.locales, str(fd, "language")) ? str(fd, "language") : locale;
+  const reply = await getTranslations({ locale: replyLocale, namespace: "rfq" });
   let files: LeadFile[] = uploads.map((u) => ({ name: u.name }));
   if (uploadsConfigured() && uploads.length) {
     const stored = await promoteUploads(reference, uploads.map((u) => ({ path: u.path ?? "", name: u.name }))).catch((error) => {
@@ -103,9 +131,11 @@ export async function submitRfq(_prev: FormState, fd: FormData): Promise<FormSta
       files,
       consent: { text: tr.markup("consent", { privacy: (chunks) => chunks }), marketing: fd.get("marketing") === "on", at: new Date().toISOString() },
       autoReply: {
-        subject: `${tr("successTitle", { name })} (${reference})`,
-        text: `${tr("successBody", { reference, email })}\n\n${tr("nextTitle")}:\n1. ${tr("next1")}\n2. ${tr("next2")}\n3. ${tr("next3")}\n\nFuerte Technologies & Contracting Services · +974 7125 8588`,
+        subject: `${reply("successTitle", { name })} (${reference})`,
+        text: `${reply("successBody", { reference, email })}\n\n${reply("nextTitle")}:\n1. ${reply("next1")}\n2. ${reply("next2")}\n3. ${reply("next3")}\n\nFuerte Technologies & Contracting Services · +974 7125 8588`,
       },
+      triage: { ...scoreRfq(fields, files.length), pillars: pillarsOf(locale, services) },
+      source: parseSource(str(fd, "source")),
     });
   } catch (error) {
     console.error("[rfq] delivery failed", reference, error);

@@ -1,12 +1,15 @@
 import { after } from "next/server";
 
 import { markLead, storeLead, unsyncedLeads } from "@/lib/forms/leads";
+import type { Tier } from "@/lib/forms/score";
 import { supabaseConfigured } from "@/lib/supabase";
 
 /**
  * Lead delivery. Every channel is optional and configured by environment variables (.env.example):
  * - SUPABASE_URL + SUPABASE_KEY: the leads table, written first (lib/forms/leads.ts)
  * - RESEND_API_KEY + LEADS_EMAIL_TO (+ LEADS_EMAIL_FROM): email to sales, with links to uploaded files; auto-reply to the sender
+ * - LEADS_ROUTES (optional): JSON of pillar → extra recipients, e.g. {"elv":"elv@…","cyber-security":"soc@…"}, added to
+ *   LEADS_EMAIL_TO for leads that name a service in that pillar
  * - CRM_WEBHOOK_URL: JSON copy of the lead for Zoho/HubSpot (sent after the response, so users never wait on it)
  * In production at least one channel must be configured, or the submission fails visibly instead of losing the lead.
  */
@@ -21,6 +24,10 @@ export type Lead = {
   consent: { text: string; marketing: boolean; at: string };
   files: LeadFile[];
   autoReply?: { subject: string; text: string };
+  /** RFQs only: score and tier (lib/forms/score.ts) and the pillars its services belong to, for routing. */
+  triage?: { score: number; tier: Tier; pillars: string[] };
+  /** First-touch campaign data captured on landing (components/layout/source-capture.tsx). */
+  source?: Record<string, string>;
 };
 
 /** An RFQ upload: stored files carry a time-limited read link (lib/forms/uploads.ts); locally only the name is known. */
@@ -59,6 +66,18 @@ const channels = () => {
   return { email: Boolean(RESEND_API_KEY && LEADS_EMAIL_TO && LEADS_EMAIL_FROM), crm: Boolean(CRM_WEBHOOK_URL), store: supabaseConfigured() };
 };
 
+/** LEADS_EMAIL_TO plus the engineers LEADS_ROUTES names for the lead's pillars. */
+function recipients(lead: Lead) {
+  const to = new Set(process.env.LEADS_EMAIL_TO!.split(",").map((s) => s.trim()));
+  try {
+    const routes = JSON.parse(process.env.LEADS_ROUTES || "{}") as Record<string, string>;
+    for (const pillar of lead.triage?.pillars ?? []) for (const r of (routes[pillar] ?? "").split(",")) if (r.trim()) to.add(r.trim());
+  } catch {
+    console.error("[lead] LEADS_ROUTES is not valid JSON");
+  }
+  return [...to].filter(Boolean);
+}
+
 export async function sendSalesEmail(lead: Lead) {
   const files = lead.files
     .map((f) => `<li>${f.url ? `<a href="${escape(f.url)}">${escape(f.name)}</a>` : escape(f.name)}${f.size ? ` (${(f.size / 1048576).toFixed(1)} MB)` : ""}</li>`)
@@ -68,10 +87,10 @@ export async function sendSalesEmail(lead: Lead) {
     .join("");
   await resend({
     from: process.env.LEADS_EMAIL_FROM,
-    to: process.env.LEADS_EMAIL_TO!.split(","),
+    to: recipients(lead),
     reply_to: lead.replyTo,
-    subject: `${lead.subject} [${lead.reference}]`,
-    html: `<h2>${escape(lead.subject)}</h2><p>Reference: <b>${lead.reference}</b> · Locale: ${lead.locale}</p><table>${rows}</table>${files ? `<p>Files (links expire after 7 days):</p><ul>${files}</ul>` : ""}<p>Consent: ${escape(lead.consent.text)} (${lead.consent.at}) · Marketing: ${lead.consent.marketing ? "yes" : "no"}</p>`,
+    subject: `${lead.triage ? `[${lead.triage.tier.toUpperCase()} ${lead.triage.score}] ` : ""}${lead.subject} [${lead.reference}]`,
+    html: `<h2>${escape(lead.subject)}</h2><p>Reference: <b>${lead.reference}</b> · Locale: ${lead.locale}</p>${lead.source ? `<p>Source: ${escape(Object.entries(lead.source).map(([k, v]) => `${k}=${v}`).join(" · "))}</p>` : ""}<table>${rows}</table>${files ? `<p>Files (links expire after 7 days):</p><ul>${files}</ul>` : ""}<p>Consent: ${escape(lead.consent.text)} (${lead.consent.at}) · Marketing: ${lead.consent.marketing ? "yes" : "no"}</p>`,
   });
 }
 
