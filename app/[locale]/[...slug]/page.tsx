@@ -13,7 +13,7 @@ import { breadcrumbLd, JsonLd, pageMetadata } from "@/lib/seo";
 
 const INDEXES = ["/industries", "/insights"] as const;
 // Pages with their own route (they carry a form whose JS should not load elsewhere).
-const OWN_ROUTE = ["/", "/contact", "/legal/data-request"];
+const OWN_ROUTE = ["/", "/contact", "/legal/data-request", "/careers", "/vendor-pack"];
 
 type Params = { params: Promise<{ locale: string; slug: string[] }> };
 

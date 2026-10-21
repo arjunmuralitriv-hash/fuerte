@@ -11,7 +11,8 @@ import { SOURCE_KEY } from "@/components/layout/source-capture";
 import { ErrorSummary, FailedNotice, SubmitButton, Turnstile, useFormAction } from "@/components/forms/form-shell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { prepareUploads, submitRfq } from "@/lib/forms/actions";
+import { uploadFiles } from "@/components/forms/upload";
+import { submitRfq } from "@/lib/forms/actions";
 import { whatsappHref } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -104,31 +105,15 @@ export function RfqForm() {
     setUploadFailed(false);
     if (files.length) {
       setUploading(true);
-      try {
-        const plan = await prepareUploads(locale, files.map((x) => ({ name: x.name, size: x.size })));
-        if (plan.status === "invalid") {
-          setClientErrors({ files: plan.error });
-          setStep(2);
-          return;
-        }
-        if (plan.status === "failed") throw new Error("upload refused");
-        if (plan.status === "ready") {
-          await Promise.all(
-            plan.targets.map((target, i) =>
-              fetch(target.url, { method: "PUT", headers: { "Content-Type": files[i].type || "application/octet-stream", "x-upsert": "false" }, body: files[i] }).then((r) => {
-                if (!r.ok) throw new Error(`upload ${r.status}`);
-              }),
-            ),
-          );
-        }
-        data.set("uploads", JSON.stringify(files.map((x, i) => ({ name: x.name, path: plan.status === "ready" ? plan.targets[i].path : undefined }))));
-      } catch (error) {
-        console.error("[rfq] upload failed", error);
-        setUploadFailed(true);
+      const result = await uploadFiles(locale, files, "rfq");
+      setUploading(false);
+      if (result.status === "invalid") {
+        setClientErrors({ files: result.error });
+        setStep(2);
         return;
-      } finally {
-        setUploading(false);
       }
+      if (result.status === "failed") return setUploadFailed(true);
+      data.set("uploads", result.uploads);
     }
     startTransition(() => formAction(data));
   }

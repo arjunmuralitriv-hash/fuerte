@@ -22,7 +22,7 @@ export function prepareMarkdown(markdown: string, formKind?: string) {
 
   if (formKind) {
     const block = "```fuerte-form\n" + formKind + "\n```\n\n";
-    text = text.replace(/^## (?:Form|النموذج)\s*\n[\s\S]*?(?=^## )/m, block).replace(/^\*\*Form\*\*\s*\n[\s\S]*?(?=^## )/m, block);
+    text = text.replace(/^## (?:Form|النموذج)\s*\n[\s\S]*?(?=^## )/m, block).replace(/^\*\*(?:Form|النموذج)\*\*\s*\n[\s\S]*?(?=^## )/m, block);
   }
 
   const out: string[] = [];

@@ -156,7 +156,14 @@
       "fileSize": "This file is larger than 25 MB. Compress it or send it to us by email.",
       "fileType": "We can't accept this file type. Use PDF, DWG, DOCX, XLSX or ZIP.",
       "declaration": "Tick the box to confirm your request.",
-      "spam": "We couldn't verify you're human. Please try again."
+      "spam": "We couldn't verify you're human. Please try again.",
+      "jobTitle": "Enter your job title.",
+      "currentLocation": "Choose where you are now.",
+      "role": "Tell us which role you're interested in.",
+      "experience": "Enter your years of experience.",
+      "cv": "Attach your CV.",
+      "cvSize": "This file is larger than 5 MB. Compress it and try again.",
+      "cvType": "Use a PDF or DOCX file."
     }
   },
   "dataRequest": {
@@ -189,20 +196,6 @@
     "onBehalfHelp": "If yes, we'll ask for proof that you are authorised to act for them.",
     "declaration": "I confirm the information I've given is accurate. I understand Fuerte may need to verify my identity before acting on this request.",
     "success": "We've received your request. Your reference is {reference}. We'll confirm your identity and reply to you by email."
-  },
-  "formCta": {
-    "vendor-pack": {
-      "title": "Request the vendor pack",
-      "body": "Tell us your organisation and the tender or registration it's for, and we'll send the pack. The online request form is coming soon.",
-      "button": "Request by WhatsApp",
-      "prefill": "Hello Fuerte, please send me your vendor pack. Organisation: … Tender/reference: …"
-    },
-    "careers": {
-      "title": "Send your application",
-      "body": "Send us your CV, the role you're interested in and your notice period. Our online application form is coming soon.",
-      "button": "Apply by WhatsApp",
-      "prefill": "Hello Fuerte, I'd like to apply for: … (I'll send my CV here)"
-    }
   },
   "rfq": {
     "title": "Let's talk about your project",
@@ -361,5 +354,49 @@
     "home": "Go to the home page",
     "services": "Browse services",
     "contact": "Contact us"
+  },
+  "careersForm": {
+    "name": "Full name",
+    "email": "Email",
+    "phone": "Mobile",
+    "location": "Current location",
+    "locations": {
+      "inQatar": "In Qatar",
+      "outside": "Outside Qatar"
+    },
+    "role": "Role you're interested in",
+    "experience": "Years of experience",
+    "certifications": "Key certifications",
+    "certificationsHelp": "For example CCNA, Fortinet NSE, Milestone, CompTIA Security+.",
+    "notice": "Notice period",
+    "cv": "CV",
+    "cvHelp": "PDF or DOCX, up to 5 MB.",
+    "linkedin": "LinkedIn profile",
+    "consent": "I agree that Fuerte may use my details to assess my application and keep them in its talent pool for up to 12 months, as described in the <privacy>privacy notice</privacy>.",
+    "button": "Send application",
+    "success": "Thanks, {name}. We've received your application. If your profile matches a role, we'll contact you. Otherwise, we'll keep your CV in our talent pool."
+  },
+  "vendorPackForm": {
+    "name": "Full name",
+    "jobTitle": "Job title",
+    "organisation": "Organisation",
+    "email": "Work email",
+    "emailHelp": "We'll send the download link here.",
+    "phone": "Phone",
+    "purpose": "What is this for?",
+    "purposes": {
+      "supplier": "Supplier registration",
+      "tender": "Tender or RFP",
+      "prequal": "Prequalification",
+      "other": "Other"
+    },
+    "tenderRef": "Tender or reference number",
+    "consent": "I agree that Fuerte may use these details to send the vendor pack and follow up on this request, as described in the <privacy>privacy notice</privacy>.",
+    "marketing": "Send me occasional updates about Fuerte's services. I can unsubscribe at any time.",
+    "button": "Email me the vendor pack",
+    "success": "Check your inbox. We've sent the vendor pack to {email}. The link works for 7 days. Can't see it? Check your spam folder or call +974 7125 8588.",
+    "successPending": "Thanks. Our team will email the vendor pack to {email} shortly. For anything urgent, call +974 7125 8588.",
+    "emailSubject": "Fuerte vendor pack",
+    "emailBody": "Here is the Fuerte vendor pack you requested. Each link works for 7 days:"
   }
 }
