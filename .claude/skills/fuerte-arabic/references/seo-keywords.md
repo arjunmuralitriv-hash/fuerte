@@ -62,6 +62,8 @@ One row per page, generated from the front-matter of `content-drafts/ar`. Each A
 
 | Slug | English primary keyword | Arabic primary keyword | Arabic secondary keywords |
 |---|---|---|---|
+| `/projects` | Fuerte projects Qatar | مشاريع فورت في قطر | دراسات حالة أنظمة التيار الخفيف في قطر، مشاريع كاميرات المراقبة في قطر، مشاريع الشبكات في الدوحة |
+| `/clients-partners` | Fuerte clients and partners | عملاء فورت وشركاؤها | شركاء التقنية في قطر، عملاء مقاول تقنية المعلومات في قطر |
 | `/insights/moi-ssd-cctv-approval-qatar` | MoI SSD CCTV approval Qatar | اعتماد كاميرات المراقبة من وزارة الداخلية في قطر | كاميرات مراقبة معتمدة من وزارة الداخلية قطر، اشتراطات إدارة نظم الأمن لكاميرات المراقبة، ترخيص كاميرات المراقبة في قطر، القانون رقم 9 لسنة 2011 كاميرات المراقبة |
 | `/insights/pdppl-compliance-checklist-qatar` | PDPPL compliance checklist | قائمة التحقق من الامتثال لقانون حماية البيانات الشخصية | قانون حماية البيانات في قطر، القانون رقم 13 لسنة 2016 قطر، متطلبات قانون حماية البيانات الشخصية PDPPL، الامتثال لقانون الخصوصية في قطر |
 | `/insights/structured-cabling-standards-cat6-cat6a-fibre` | Cat6 vs Cat6A | الفرق بين Cat6 وCat6A | معايير الكابلات الهيكلية، الفرق بين Cat6A والألياف الضوئية، شرح معيار TIA-568، الفرق بين OM4 وOS2، الكابلات الهيكلية في قطر |
