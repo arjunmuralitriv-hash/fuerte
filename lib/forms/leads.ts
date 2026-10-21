@@ -1,4 +1,5 @@
 import type { Lead } from "@/lib/forms/deliver";
+import type { Tier } from "@/lib/forms/score";
 import { supabase } from "@/lib/supabase";
 
 /** Lead storage (plan row B4): the leads table in supabase/migrations, written first so no lead depends on email or the CRM. */
@@ -12,12 +13,30 @@ type Row = {
   fields: Lead["fields"];
   files: Lead["files"];
   consent: Lead["consent"];
+  // B5 columns (supabase/migrations/20261021000000_lead_triage.sql)
+  score: number | null;
+  tier: string | null;
+  pillars: string[];
+  source: Lead["source"] | null;
 };
 
 const leads = () => supabase().from("leads");
 
 export async function storeLead(lead: Lead) {
-  const row: Row = { reference: lead.reference, kind: lead.kind, locale: lead.locale, subject: lead.subject, email: lead.replyTo, fields: lead.fields, files: lead.files, consent: lead.consent };
+  const row: Row = {
+    reference: lead.reference,
+    kind: lead.kind,
+    locale: lead.locale,
+    subject: lead.subject,
+    email: lead.replyTo,
+    fields: lead.fields,
+    files: lead.files,
+    consent: lead.consent,
+    score: lead.triage?.score ?? null,
+    tier: lead.triage?.tier ?? null,
+    pillars: lead.triage?.pillars ?? [],
+    source: lead.source ?? null,
+  };
   const { error } = await leads().insert(row);
   if (error) throw error;
 }
@@ -30,12 +49,25 @@ export async function markLead(reference: string, patch: { emailed_at?: string; 
 /** Leads at least 10 minutes old that email or the CRM has not taken yet, rebuilt for another delivery attempt. */
 export async function unsyncedLeads(column: "emailed_at" | "crm_synced_at") {
   const { data, error } = await leads()
-    .select("reference, kind, locale, subject, email, fields, files, consent")
+    .select("reference, kind, locale, subject, email, fields, files, consent, score, tier, pillars, source")
     .is(column, null)
     .lt("created_at", new Date(Date.now() - 10 * 60_000).toISOString())
     .limit(50);
   if (error) throw error;
-  return (data as Row[]).map((r): Lead => ({ kind: r.kind, reference: r.reference, locale: r.locale, subject: r.subject, replyTo: r.email, fields: r.fields, files: r.files, consent: r.consent }));
+  return (data as Row[]).map(
+    (r): Lead => ({
+      kind: r.kind,
+      reference: r.reference,
+      locale: r.locale,
+      subject: r.subject,
+      replyTo: r.email,
+      fields: r.fields,
+      files: r.files,
+      consent: r.consent,
+      ...(r.score !== null ? { triage: { score: r.score, tier: r.tier as Tier, pillars: r.pillars } } : {}),
+      ...(r.source ? { source: r.source } : {}),
+    }),
+  );
 }
 
 /** 24-month retention (plan section 5): deletes old leads and their files, and uploads never submitted. */

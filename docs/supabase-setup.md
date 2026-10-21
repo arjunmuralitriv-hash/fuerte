@@ -50,3 +50,11 @@ No CORS setup is needed: Supabase Storage accepts uploads from any origin throug
   - deletes leads older than 24 months, with their files
   - deletes uploads never submitted after a day
 - **To answer a PDPPL data request:** find the person's leads with `select * from leads where lower(email) = lower('…')`. Delete them there, and their files under `rfq/<reference>/` in Storage.
+
+## 4. Lead triage (B5)
+
+1. **Before deploying B5,** run `supabase/migrations/20261021000000_lead_triage.sql` in the SQL editor. It adds `score`, `tier`, `pillars` and `source` to `leads`.
+   - If the code goes live first, each insert fails until the migration runs. The lead still goes out by email, but it isn't stored.
+2. **Optional routing:** set the Vercel env var `LEADS_ROUTES` to a JSON object mapping a pillar to extra recipients, for example `{"elv":"elv-lead@…","cyber-security":"soc@…"}`. Matching RFQs then go to those people as well as `LEADS_EMAIL_TO`.
+
+The sales email subject starts with the tier and score, for example `[HOT 72]`. In the Table Editor, sort `leads` by `score`, or filter by `tier`.
