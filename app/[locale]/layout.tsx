@@ -1,5 +1,6 @@
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -95,6 +96,14 @@ export default async function LocaleLayout({
         </NextIntlClientProvider>
         {/* Cookieless Core Web Vitals (plan section 10); reports to the site's own /_vercel endpoint. */}
         <SpeedInsights />
+        {/* Cloudflare Web Analytics: cookieless page statistics, no consent needed (plan row B8; cookie notice). */}
+        {process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN && (
+          <Script
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={JSON.stringify({ token: process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN })}
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );
