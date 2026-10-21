@@ -70,12 +70,19 @@ export async function unsyncedLeads(column: "emailed_at" | "crm_synced_at") {
   );
 }
 
-/** 24-month retention (plan section 5): deletes old leads and their files, and uploads never submitted. */
+const monthsAgo = (months: number) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.toISOString();
+};
+
+/** Retention (plan section 5): applications after 12 months, other leads after 24, with their files; uploads never submitted. */
 export async function purgeExpired(bucket: string) {
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - 24);
-  const { count, error } = await leads().delete({ count: "exact" }).lt("created_at", cutoff.toISOString());
-  if (error) throw error;
+  const applications = await leads().delete({ count: "exact" }).eq("kind", "careers").lt("created_at", monthsAgo(12));
+  if (applications.error) throw applications.error;
+  const others = await leads().delete({ count: "exact" }).neq("kind", "careers").lt("created_at", monthsAgo(24));
+  if (others.error) throw others.error;
+  const count = (applications.count ?? 0) + (others.count ?? 0);
 
   const files = await supabase().rpc("expired_lead_files", { bucket });
   if (files.error) throw files.error;
@@ -84,5 +91,5 @@ export async function purgeExpired(bucket: string) {
     const removed = await supabase().storage.from(bucket).remove(names);
     if (removed.error) throw removed.error;
   }
-  return { leads: count ?? 0, files: names.length };
+  return { leads: count, files: names.length };
 }

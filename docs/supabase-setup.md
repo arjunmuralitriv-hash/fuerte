@@ -58,3 +58,14 @@ No CORS setup is needed: Supabase Storage accepts uploads from any origin throug
 2. **Optional routing:** set the Vercel env var `LEADS_ROUTES` to a JSON object mapping a pillar to extra recipients, for example `{"elv":"elv-lead@…","cyber-security":"soc@…"}`. Matching RFQs then go to those people as well as `LEADS_EMAIL_TO`.
 
 The sales email subject starts with the tier and score, for example `[HOT 72]`. In the Table Editor, sort `leads` by `score`, or filter by `tier`.
+
+## 5. Careers and vendor pack (B6)
+
+1. **Before deploying B6,** run `supabase/migrations/20261021010000_careers_vendor_pack.sql`. It allows the two new lead kinds and adds 12-month retention for CVs.
+2. **Vendor pack documents:** in Storage → `rfq-files`, create a folder `vendor-pack` and upload the PDFs (CR, certificates, company profile…).
+   - Each request emails the visitor a 7-day download link for every file in that folder.
+   - While the folder is empty, the visitor is told the pack will follow, and the sales email subject reads "Vendor pack TO SEND BY HAND".
+   - Files in `vendor-pack/` are never deleted by the retention job.
+3. **Optional:** set `CAREERS_EMAIL_TO` (for example HR) so applications and CVs go only there, not to `LEADS_EMAIL_TO`.
+
+CVs are stored under `careers/<reference>/` and deleted after 12 months, matching the careers consent and privacy notice (§6).

@@ -15,7 +15,7 @@ import { supabaseConfigured } from "@/lib/supabase";
  */
 
 export type Lead = {
-  kind: "rfq" | "data-request";
+  kind: "rfq" | "data-request" | "careers" | "vendor-pack";
   reference: string;
   locale: string;
   subject: string;
@@ -66,8 +66,9 @@ const channels = () => {
   return { email: Boolean(RESEND_API_KEY && LEADS_EMAIL_TO && LEADS_EMAIL_FROM), crm: Boolean(CRM_WEBHOOK_URL), store: supabaseConfigured() };
 };
 
-/** LEADS_EMAIL_TO plus the engineers LEADS_ROUTES names for the lead's pillars. */
+/** LEADS_EMAIL_TO plus the engineers LEADS_ROUTES names for the lead's pillars; applications go to CAREERS_EMAIL_TO only, when set. */
 function recipients(lead: Lead) {
+  if (lead.kind === "careers" && process.env.CAREERS_EMAIL_TO) return process.env.CAREERS_EMAIL_TO.split(",").map((s) => s.trim());
   const to = new Set(process.env.LEADS_EMAIL_TO!.split(",").map((s) => s.trim()));
   try {
     const routes = JSON.parse(process.env.LEADS_ROUTES || "{}") as Record<string, string>;
