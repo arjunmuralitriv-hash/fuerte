@@ -17,7 +17,8 @@ const FORM_KINDS: Record<string, string> = { "/legal/data-request": "data-reques
 export function contentMetadata(locale: Locale, slug: string): Metadata {
   const page = getPage(locale, slug);
   if (!page) return {};
-  return pageMetadata({ locale, slug, title: page.fm.metaTitle, description: page.fm.metaDescription });
+  const meta = pageMetadata({ locale, slug, title: page.fm.metaTitle, description: page.fm.metaDescription });
+  return page.fm.unlisted ? { ...meta, robots: { index: false, follow: true } } : meta;
 }
 
 async function crumbsFor(locale: Locale, page: Page): Promise<Crumb[]> {

@@ -1,5 +1,5 @@
 import type { Locale } from "@/i18n/routing";
-import { getAllSlugs, getPage, getSource } from "@/lib/content";
+import { getListedSlugs, getPage, getSource } from "@/lib/content";
 import { getHome } from "@/lib/content/home";
 import { absoluteUrl, localePath } from "@/lib/seo";
 import { SITE } from "@/lib/site";
@@ -71,7 +71,7 @@ const llmsPath = (locale: Locale, file: "llms.txt" | "llms-full.txt") => (locale
 
 /** /llms.txt and /ar/llms.txt (llmstxt.org): a short map of the site pointing at the Markdown twins. */
 export function llmsIndex(locale: Locale = "en") {
-  const slugs = getAllSlugs();
+  const slugs = getListedSlugs();
   const home = getPage(locale, "/");
   const copy = COPY[locale];
   const lines = [`# ${copy.title}`, "", `> ${home?.fm.metaDescription ?? ""} ${copy.based}`, "", copy.about, ""];
@@ -97,7 +97,7 @@ export function llmsIndex(locale: Locale = "en") {
 
 /** /llms-full.txt and /ar/llms-full.txt: every page's Markdown twin, concatenated. */
 export function llmsFull(locale: Locale = "en") {
-  return getAllSlugs()
+  return getListedSlugs()
     .map((slug) => markdownTwin(locale, slug))
     .filter(Boolean)
     .join("\n\n---\n\n");

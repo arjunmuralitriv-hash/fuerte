@@ -18,6 +18,9 @@ export type Frontmatter = {
   /** ISO dates (YAML may parse them to Date). */
   datePublished?: string | Date;
   dateModified?: string | Date;
+  /** Built but not yet public (e.g. Projects until the first case study): noindex, and left out of the sitemap,
+   * llms.txt and /api/knowledge. Remove the flag when the page has real content. */
+  unlisted?: boolean;
 };
 
 export type Section = "home" | "services" | "industries" | "insights" | "legal" | "page";
@@ -112,6 +115,11 @@ export function getSource(locale: Locale, slug: string) {
 /** Every canonical slug (English is the master list). */
 export function getAllSlugs(): string[] {
   return [...load(routing.defaultLocale).keys()];
+}
+
+/** Slugs of the pages meant to be found: every page except those marked `unlisted`. */
+export function getListedSlugs(): string[] {
+  return getAllSlugs().filter((slug) => !getPage(routing.defaultLocale, slug)?.fm.unlisted);
 }
 
 /** Child pages of a section, e.g. all industries, in file order. */
