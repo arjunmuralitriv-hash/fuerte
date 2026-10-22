@@ -47,6 +47,8 @@ const nextConfig: NextConfig = {
   // Lets parallel dev servers use separate output folders (e.g. NEXT_DIST_DIR=.next-scene).
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // Inline the CSS into the HTML: the stylesheet round trip was the one thing holding back first paint (the LCP headline).
+  experimental: { inlineCss: true },
   // Inlined into server and browser bundles, so the browser SDK can be dropped entirely when it is empty.
   env: { SENTRY_DSN },
   async rewrites() {
