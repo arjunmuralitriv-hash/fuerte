@@ -17,8 +17,9 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
-      {/* Three columns on wide screens so the menu sits in the true centre, whatever the widths either side. */}
-      <div className="container-page flex h-16 items-center justify-between gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+      {/* Three columns on wide screens so the menu sits in the true centre, whatever the widths either side. From 2xl the
+          row is wider than the page (96rem), so the "Under attack?" link fits on one line in both languages. */}
+      <div className="container-page flex h-16 items-center justify-between gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr] 2xl:max-w-(--breakpoint-2xl)">
         <Link href="/" className="flex min-h-11 shrink-0 items-center gap-3 rounded-lg">
           {/* Placeholder mark until the client supplies the logo SVG. */}
           <span aria-hidden className="grid size-8 place-items-center rounded-md bg-primary text-small font-semibold text-primary-foreground">
@@ -31,7 +32,7 @@ export async function SiteHeader() {
         <div className="flex items-center justify-end gap-1">
           <Link
             href="/emergency-cyber-response"
-            className="me-2 hidden min-h-11 items-center gap-1.5 rounded-lg px-2 text-small font-medium text-primary-ink transition-colors hover:bg-muted 2xl:inline-flex"
+            className="me-2 hidden min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2 text-small whitespace-nowrap font-medium text-primary-ink transition-colors hover:bg-muted 2xl:inline-flex"
           >
             <ShieldAlert aria-hidden className="size-4" />
             {t("nav.underAttack")}
