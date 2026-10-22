@@ -5,8 +5,9 @@ import { preload } from "react-dom";
 
 /** A cut's frames are `${path}0000.${ext}` … ; with `loops`, each beat N also has a seamless idle loop at `${path}loop-N.mp4`;
  * `beats` overrides the manifest's beat positions for this cut; `version` is added to every URL so a re-render is never
- * served from the browser cache (frames are cached for a week). */
-export type FilmFormat = { path: string; ext: string; count: number; loops?: boolean; beats?: number[]; version?: string };
+ * served from the browser cache (frames are cached for a week). `video` is the same cut as one video, scrubbed in place of
+ * the frames when given. */
+export type FilmFormat = { path: string; ext: string; count: number; loops?: boolean; beats?: number[]; version?: string; video?: string };
 /**
  * 16:9 for wide screens, 9:16 rendered separately for phones (framed for the copy at the bottom). Wide screens on RTL
  * pages use landscapeRtl when given: the same film composed with the subject on the left, clear of the copy.
@@ -39,6 +40,7 @@ const CONCURRENCY = 6;
 const EASE = 0.16; // Per-frame easing toward the scroll target: smooths wheel steps without lag.
 const SETTLE_MS = 450; // Scroll stillness before a beat's idle loop takes over.
 const ARRIVE = 0.25; // Distance from beat N, in beats, that still counts as resting on it (its card comes in).
+const FPS = 30; // Frame rate of the cut videos (scripts/encode_film_video.py).
 
 /** The cut for this screen and page direction (client only). */
 function pick(formats: FilmFormats): FilmFormat {
@@ -61,13 +63,16 @@ const LAYER = "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full";
 /**
  * Pre-rendered film scrubbed by scroll (docs/film-plan.md), fixed behind the page and driven by the data-beat
  * contract: the film sits on manifest.beats[N] when section N is centred. Between frames it blends the two nearest,
- * so transitions glide. When scrolling rests on a beat, that beat's idle loop (same first frame, effects running)
- * fades in over the canvas and plays until the visitor scrolls again. Reduced motion and Save-Data load only the beat
+ * so transitions glide. When the cut has a video, the canvas shows only the beat stills while the whole video downloads,
+ * then the video takes over and is scrubbed instead (?film=frames keeps the frames, to compare). When scrolling rests
+ * on a beat, that beat's idle loop (same first frame, effects running) fades in over the film and plays until the
+ * visitor scrolls again. Reduced motion and Save-Data load only the beat
  * stills and no loops. Signals "fuerte:scene-ready" for Reveal, and "fuerte:film-beat" (detail: N, also <html data-film-beat>)
  * each time the film lands on beat N, so that beat's card comes in once the camera move has arrived.
  */
 export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const filmRef = useRef<HTMLVideoElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const theme = useSiteTheme();
   // Preload the opening frame for the theme actually on <html> (next-themes sets it before hydration): on the hydration
@@ -79,9 +84,10 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const film = filmRef.current;
     const video = videoRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !video || !ctx) return;
+    if (!canvas || !film || !video || !ctx) return;
     const root = document.documentElement;
     // The hydration pass still sees the server snapshot ("dark"); skip it so the wrong cut is never fetched.
     if (theme !== (root.classList.contains("dark") ? "dark" : "light")) return;
@@ -89,6 +95,12 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const stills =
       matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
     const loops = format.loops && !stills;
+    // The cut videos are H.264 (High profile, 1080p): browsers built without it keep the frames.
+    const scrub =
+      !stills && new URLSearchParams(location.search).get("film") !== "frames" && film.canPlayType('video/mp4; codecs="avc1.640032"') ? format.video : undefined;
+    const abort = new AbortController();
+    let ready = false; // the film video is on screen and scrubbed instead of the canvas
+    let seekFrame = -1; // frame the film video was last asked to show
     const frames: (HTMLImageElement | undefined)[] = new Array(format.count);
     const sections = [...document.querySelectorAll<HTMLElement>("[data-beat]")].sort((a, b) => Number(a.dataset.beat) - Number(b.dataset.beat));
     let disposed = false;
@@ -101,7 +113,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
 
     // Load frames with a small concurrency limit, decoding each before it can be drawn (no decode jank on scrub).
     const beats = format.beats ?? manifest.beats; // a cut may carry its own beat positions
-    const queue = stills ? [...beats] : loadOrder(format.count, beats);
+    const queue = stills || scrub ? [...beats] : loadOrder(format.count, beats);
     const fetchFrame = (i: number) => {
       const img = new Image();
       img.src = frameUrl(format, i);
@@ -123,8 +135,31 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     // The opening frame (already preloaded) loads now; the rest wait until the page has loaded and the main thread is
     // idle, so the film never competes with the page's own resources.
     const startRest = () => {
+      if (scrub) loadFilm(scrub);
       for (let k = 0; k < CONCURRENCY; k++) pump();
     };
+    // The whole video is downloaded before it is used, so a seek never waits on the network (a partly loaded video is
+    // fetched in ranges, and iOS stalls on each seek). If it cannot load or play, the frames load instead.
+    const loadFrames = () => {
+      if (disposed) return;
+      queue.push(...loadOrder(format.count, beats).filter((i) => !beats.includes(i)));
+      for (let k = 0; k < CONCURRENCY; k++) pump();
+    };
+    const loadFilm = (url: string) =>
+      fetch(url, { signal: abort.signal })
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${r.status}`))))
+        .then((blob) => {
+          film.onloadeddata = () => {
+            // Playing once lets iOS paint the frames it seeks to; muted inline play is allowed, and refused in Low Power Mode.
+            void film.play().catch(() => {}).finally(() => {
+              film.pause();
+              seek(Math.max(current, 0));
+            });
+          };
+          film.onerror = loadFrames;
+          film.src = URL.createObjectURL(blob);
+        })
+        .catch(loadFrames);
     const whenIdle = () => ("requestIdleCallback" in window ? requestIdleCallback(startRest, { timeout: 2000 }) : setTimeout(startRest, 200));
     void fetchFrame(queue.shift()!);
     if (document.readyState === "complete") whenIdle();
@@ -194,6 +229,21 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       }
     };
 
+    // Show a frame of the film video: one seek at a time, each starting from the newest scroll position once the last lands.
+    const seek = (pos: number) => {
+      drawn = pos;
+      const f = Math.round(pos);
+      if (f === seekFrame || film.seeking) return;
+      seekFrame = f;
+      film.currentTime = (f + 0.5) / FPS;
+    };
+    film.onseeked = () => {
+      if (disposed) return;
+      ready = true;
+      film.dataset.shown = "true";
+      seek(drawn);
+    };
+
     // Idle loops: fade a beat's loop in once scrolling has rested on it; fade out (and pause) as soon as it moves.
     const showLoop = (beat: number) => {
       if (looping === beat) return;
@@ -220,7 +270,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       const beat = beatValue();
       const target = stills ? frameFor(Math.round(beat)) : frameFor(beat);
       current = current < 0 || stills ? target : current + (target - current) * EASE;
-      if (Math.abs(current - drawn) > 0.004 || drawn < 0) draw(current);
+      if (Math.abs(current - drawn) > 0.004 || drawn < 0) (ready ? seek : draw)(current);
       // Arrived on beat N: the film has caught up with the scroll, which rests near N, and a frame is on screen.
       const n = Math.round(beat);
       const at = drawn >= 0 && Math.abs(target - current) < 0.5 && Math.abs(beat - n) < ARRIVE ? n : -1;
@@ -258,6 +308,11 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       cancelAnimationFrame(raf);
       clearTimeout(settle);
       hideLoop();
+      abort.abort();
+      film.onloadeddata = film.onseeked = film.onerror = null;
+      film.dataset.shown = "false";
+      if (film.src) URL.revokeObjectURL(film.src);
+      film.removeAttribute("src");
       video.removeAttribute("src");
       removeEventListener("scroll", onScroll);
       removeEventListener("resize", resize);
@@ -270,6 +325,15 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
   return (
     <>
       <canvas ref={canvasRef} aria-hidden className={className ?? LAYER} />
+      <video
+        ref={filmRef}
+        aria-hidden
+        muted
+        playsInline
+        preload="auto"
+        data-shown="false"
+        className={`${LAYER} object-cover opacity-0 transition-opacity duration-500 data-[shown=true]:opacity-100`}
+      />
       <video
         ref={videoRef}
         aria-hidden

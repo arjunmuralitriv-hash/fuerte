@@ -21,6 +21,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${ANALYTICS} ${LINKEDIN}`,
   "font-src 'self'",
+  // The film video is downloaded whole and played from memory (components/sections/scroll-film.tsx).
+  "media-src 'self' blob:",
   `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${SENTRY ? ` ${SENTRY}` : ""}${CF_ANALYTICS ? ` ${CF_ANALYTICS.report}` : ""}${SUPABASE ? ` ${SUPABASE}` : ""}`,
   `frame-src ${TURNSTILE}`,
   "worker-src 'self' blob:",
@@ -64,6 +66,7 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // Film frames (lib/film.ts) only change when the film is re-rendered: cache for a week, refresh in the background.
       { source: "/film/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
+      { source: "/film-video/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
     ];
   },
 };
