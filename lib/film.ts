@@ -18,8 +18,11 @@ const V2 = { count: 528, beats: [0, 139, 214, 294, 374, 459, 527], version: "2" 
 
 const cut = (theme: "light" | "dark", format: "landscape" | "landscape-rtl" | "portrait"): FilmFormat => {
   const path = `/film/${theme}/${format}/`;
-  const v = existsSync(join(process.cwd(), "public", path, "0527.avif")) ? V2 : V1;
-  return { path, ext: "avif", loops: true, ...v };
+  const dir = join(process.cwd(), "public", path);
+  const v = existsSync(join(dir, "0527.avif")) ? V2 : V1;
+  // Idle loops only once they are rendered (all seven, loop-0 … loop-6), so the player never requests a missing file.
+  const loops = [0, 1, 2, 3, 4, 5, 6].every((n) => existsSync(join(dir, `loop-${n}.mp4`)));
+  return { path, ext: "avif", loops, ...v };
 };
 
 export function homeFilm(): FilmManifest {
