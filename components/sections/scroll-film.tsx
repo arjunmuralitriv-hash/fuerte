@@ -70,7 +70,12 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const theme = useSiteTheme();
-  if (typeof window !== "undefined") preload(frameUrl(pick(manifest.themes[theme]), manifest.beats[0]), { as: "image", fetchPriority: "high" });
+  // Preload the opening frame for the theme actually on <html> (next-themes sets it before hydration): on the hydration
+  // render `theme` is still the server snapshot ("dark"), which fetched the night cut for light-theme visitors too.
+  if (typeof window !== "undefined") {
+    const live: Theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+    preload(frameUrl(pick(manifest.themes[live]), manifest.beats[0]), { as: "image", fetchPriority: "high" });
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -78,6 +83,8 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const ctx = canvas?.getContext("2d");
     if (!canvas || !video || !ctx) return;
     const root = document.documentElement;
+    // The hydration pass still sees the server snapshot ("dark"); skip it so the wrong cut is never fetched.
+    if (theme !== (root.classList.contains("dark") ? "dark" : "light")) return;
     const format = pick(manifest.themes[theme]);
     const stills =
       matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
