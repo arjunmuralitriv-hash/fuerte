@@ -63,7 +63,7 @@ const LAYER = "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full";
  * contract: the film sits on manifest.beats[N] when section N is centred. Between frames it blends the two nearest,
  * so transitions glide. When scrolling rests on a beat, that beat's idle loop (same first frame, effects running)
  * fades in over the canvas and plays until the visitor scrolls again. Reduced motion and Save-Data load only the beat
- * stills and no loops. Signals "fuerte:scene-ready" for Reveal, and "fuerte:film-beat" (detail: N, also <html data-film-beat>)
+ * stills and no loops. Signals "fuerte:film-beat" (detail: N, also <html data-film-beat>)
  * each time the film lands on beat N, so that beat's card comes in once the camera move has arrived.
  */
 export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; className?: string }) {
@@ -181,10 +181,6 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
         paint(frames[i]!, 1);
       }
       drawn = pos;
-      if (!root.dataset.scene) {
-        root.dataset.scene = stills ? "fallback" : "ready";
-        window.dispatchEvent(new Event("fuerte:scene-ready"));
-      }
     };
 
     // Idle loops: fade a beat's loop in once scrolling has rested on it; fade out (and pause) as soon as it moves.
@@ -255,7 +251,6 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       removeEventListener("scroll", onScroll);
       removeEventListener("resize", resize);
       removeEventListener("load", whenIdle);
-      delete root.dataset.scene;
       delete root.dataset.filmBeat;
     };
   }, [manifest, theme]);
