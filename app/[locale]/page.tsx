@@ -62,7 +62,7 @@ export default async function HomePage({ params }: Params) {
       {/* The pre-rendered film is fixed behind the beat sections and scrubs to their data-beat positions (lib/film.ts). */}
       <ScrollFilm manifest={homeFilm()} />
 
-      {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero waits for the scene (Reveal). */}
+      {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero fades in from first paint, never later (a late fade-in would become the LCP). */}
       <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">
         {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. It runs on
             past the hero and fades out there, so it never ends in a hard edge over the film. */}
@@ -78,7 +78,7 @@ export default async function HomePage({ params }: Params) {
           <h1 id="hero-title" className="mt-4 max-w-4xl text-display">
             {hero.title}
           </h1>
-          <Reveal waitForScene>
+          <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-700">
             {/* Phones: the sticky CTA bar already offers survey, quote and WhatsApp, so the hero drops its own buttons to leave the scene room. */}
             <Markdown source={hero.body} ctx={ctx} className={cn(lead, "mt-2 max-md:[&_.not-prose]:hidden")} />
             {hero.scrollCue && (
@@ -87,7 +87,7 @@ export default async function HomePage({ params }: Params) {
                 {hero.scrollCue}
               </a>
             )}
-          </Reveal>
+          </div>
         </div>
       </section>
 

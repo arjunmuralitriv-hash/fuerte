@@ -1,4 +1,10 @@
-@import "tailwindcss";
+/* Scan only the code for class names: by default Tailwind scans the whole repo, and the design and skill reference
+   files under .claude/ and docs/ are full of example classes, which tripled the stylesheet. */
+@import "tailwindcss" source(none);
+@source "../app";
+@source "../components";
+@source "../lib";
+@source "../i18n";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
