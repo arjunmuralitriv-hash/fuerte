@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import type { FilmFormat, FilmManifest } from "@/components/sections/scroll-film";
@@ -6,7 +6,8 @@ import type { FilmFormat, FilmManifest } from "@/components/sections/scroll-film
 /**
  * The home page film (docs/film-plan.md), rendered by blender/scripts/build_film.py and encoded by encode_frames.py
  * into public/film/<theme>/<format>/. Light theme = dusk cut, dark theme = night cut; Arabic pages on wide screens use
- * the landscape-rtl cut (subject on the left, clear of the right-hand copy). Each cut has an idle loop per beat
+ * the landscape-rtl cut (subject on the left, clear of the right-hand copy). Each cut is also encoded as one video
+ * (public/film-video/<theme>-<format>.mp4), which the player scrubs in place of the frames. Each cut has an idle loop per beat
  * (loop-N.mp4, rendered by build_film.py --loop) that plays while the visitor rests on that beat.
  *
  * The v2 render has every film frame (528). While it is still being rendered, a cut whose v2 frames are not encoded yet
@@ -22,7 +23,11 @@ const cut = (theme: "light" | "dark", format: "landscape" | "landscape-rtl" | "p
   const v = existsSync(join(dir, "0527.avif")) ? V2 : V1;
   // Idle loops only once they are rendered (all seven, loop-0 … loop-6), so the player never requests a missing file.
   const loops = [0, 1, 2, 3, 4, 5, 6].every((n) => existsSync(join(dir, `loop-${n}.mp4`)));
-  return { path, ext: "avif", loops, ...v };
+  // The cut as one video (scripts/encode_film_video.py), scrubbed instead of the frames when present. Its size is the
+  // cache key, so a re-encode is never served from the browser cache.
+  const file = join(process.cwd(), "public", "film-video", `${theme}-${format}.mp4`);
+  const video = existsSync(file) ? `/film-video/${theme}-${format}.mp4?v=${statSync(file).size}` : undefined;
+  return { path, ext: "avif", loops, video, ...v };
 };
 
 export function homeFilm(): FilmManifest {

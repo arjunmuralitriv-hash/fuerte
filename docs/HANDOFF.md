@@ -44,16 +44,11 @@ Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
    - **Still open:**
      - **Beat-card reveal timing:** the beat cards appear immediately because the film player signals "scene ready" on its first frame. Bring each card in when the film arrives at its beat, or when that beat's loop starts.
      - **Hero background edge:** the hero section's dark background ends in a hard horizontal edge over the film. Fade it out instead.
-     - **Download weight: A/B test scroll-scrubbed video (no re-render).**
-       - **Problem:** a 528-frame AVIF cut is about 45–50 MB on desktop and 35–40 MB on phone. Visitors download only their own cut, progressively, and it is cached.
-       - **Test:** encode the same frames as one MP4 (H.264) and one WebM (AV1/VP9) per cut, with a short keyframe interval (e.g. every 4–8 frames). Add a player mode in `scroll-film.tsx` that sets `video.currentTime` from the scroll position instead of drawing AVIF frames to the canvas.
-       - **Source frames:**
-         - The lossless PNG masters live only on the user's laptop (`blender/build/full/`, git-ignored).
-         - Encode from the committed AVIFs only for a size and feel test.
-         - Ask the user to run the final encode locally, or to push the masters somewhere.
-       - **Compare:**
-         - size per cut
-         - seek smoothness in Chrome, Edge, Firefox and Safari, especially iOS Safari, which is known to stutter on seeks
+     - **Scroll-scrubbed video: built, needs a check on a real iPhone.**
+       - Each cut is one H.264 video in `public/film-video/<theme>-<format>.mp4` (14–18 MB, against 35–50 MB of AVIF frames), made by `scripts/encode_film_video.py`. Re-run it whenever the frames change.
+       - The player downloads the visitor's cut whole, shows the beat stills meanwhile, then scrubs the video. With no H.264 support, or if the video fails, it falls back to the frames. `?film=frames` forces the frames, for side-by-side comparison.
+       - The committed videos are encoded from the AVIFs. For the final cut, encode from the lossless masters on the laptop: `python3 scripts/encode_film_video.py dark/portrait --src blender/build/full/...`.
+       - **Still to check on an iPhone:** smoothness against `?film=frames`, and that the film shows in Low Power Mode.
          - CPU use
          - how the idle-loop hand-off at each beat looks
        - **Decision:** keep video only if it is clearly smaller and scrubs as smoothly as the AVIF sequence on iOS. Otherwise keep AVIF.
