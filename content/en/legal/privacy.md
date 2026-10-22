@@ -34,7 +34,7 @@ This notice explains how [CONFIRM: legal name as on the CR] ("Fuerte", "we", "us
 
 **Data we collect automatically**
 - **Essential technical data:** IP address, browser type, device and security logs, needed to run and protect the site.
-- **Analytics:** aggregated, cookieless page statistics through Plausible. With your consent only: Google Analytics 4 and Microsoft Clarity.
+- **Analytics:** aggregated, cookieless page statistics through Cloudflare Web Analytics. With your consent only: Google Analytics 4 and Microsoft Clarity.
 - **Marketing:** with your consent only: the LinkedIn Insight Tag.
 - **Campaign data:** the page or campaign that brought you to us (UTM parameters), linked to your enquiry.
 
@@ -54,7 +54,7 @@ We do not ask for personal data of a special nature (such as health or religious
 | Send the vendor pack | Vendor pack request data | Your request |
 | Assess job applications and keep a talent pool | Application data | Your consent |
 | Send marketing emails and guides | Name, email, preferences | Your consent, which you can withdraw at any time |
-| Measure and improve the website | Analytics data | Your consent (except cookieless Plausible statistics) |
+| Measure and improve the website | Analytics data | Your consent (except cookieless Cloudflare Web Analytics statistics) |
 | Keep the website and our systems secure | Technical and security logs | Our legitimate purpose of protecting systems [CONFIRM wording with counsel] |
 | Meet legal obligations and defend legal claims | Relevant records | Legal obligation |
 
@@ -64,12 +64,12 @@ We do not ask for personal data of a special nature (such as health or religious
 
 We share personal data only when needed, and only with providers bound by written agreements to protect it:
 
-- **Website hosting and delivery:** [CONFIRM: e.g. Vercel, Cloudflare]
-- **Database and lead storage:** [CONFIRM: e.g. Supabase (Middle East region) or Microsoft Azure (Qatar Central)]
-- **Email delivery:** [CONFIRM: e.g. Resend]
+- **Website hosting and delivery:** Vercel. The servers that process the forms you send run in Mumbai, India; public pages are delivered through Vercel's global network.
+- **Database, lead storage and uploaded files:** Supabase, in its Mumbai (India) region
+- **Email delivery:** Resend
 - **CRM:** [CONFIRM: Zoho CRM or HubSpot]
 - **Anti-spam:** Cloudflare Turnstile
-- **Analytics and advertising (with consent):** Plausible, Google, Microsoft, LinkedIn
+- **Analytics and advertising:** Cloudflare Web Analytics (cookieless); with your consent: Google, Microsoft, LinkedIn
 - **Messaging:** WhatsApp (Meta), when you contact us that way
 - **AI assistant (when available):** [CONFIRM: AI provider, e.g. Anthropic]
 - **Professional advisers:** lawyers, auditors and insurers, under confidentiality
@@ -79,7 +79,7 @@ We do not sell personal data.
 
 ## 5. Transfers outside Qatar
 
-Some providers store or process data outside Qatar. We store enquiry and lead data in [CONFIRM: Qatar or GCC region]. Where data is transferred abroad, we take steps to make sure it stays protected, as the PDPPL requires. [CONFIRM: transfer list and safeguards.]
+We store enquiry and lead data, including files you upload, with Supabase in Mumbai, India. The servers that process the forms you send also run in Mumbai. Other providers may process data in other countries, including the United States: our email provider Resend, for example. Where data is transferred abroad, we take steps to make sure it stays protected, as the PDPPL requires: a written data processing agreement with each provider, encryption of data in transit and at rest, and access limited to authorised staff. [CONFIRM: transfer wording and safeguards with counsel.]
 
 ## 6. How long we keep it
 

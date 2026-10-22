@@ -67,8 +67,8 @@ Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
    - B1: hide the `[CONFIRM]`/`[PLACEHOLDER]`/`[CR NUMBER]` markers in production, add a `content:check` launch gate, and remove the internal notes published in `content/*/legal/legal-information.md`.
    - B3: Turnstile must fail closed in production.
 5. **B2:** RFQ uploads are capped at 25 MB, but Vercel rejects request bodies over 4.5 MB. Upload straight to storage and email a link. **Ask the user:** Vercel Blob, a GCC-region bucket, or Cloudflare R2 (see the Cloudflare section). These files are personal data under the PDPPL, so prefer a GCC-region store for them even if the film media goes to R2.
-6. **B4:** durable lead storage in a GCC region, stored first and then synced to email and CRM, plus the 24-month retention job. **Ask the user:** Supabase (Middle East) or Azure Qatar Central?
-7. **B5:**
+6. **B4:** durable lead storage in a GCC region, stored first and then synced to email and CRM, plus the 24-month retention job. **Decided 2026-10-20:** Supabase in Mumbai (`ap-south-1`); Supabase has no Gulf region.
+7. **B5:** The WhatsApp sales alert was dropped on 2026-10-21: email only for now.
    - UTM/source capture
    - lead scoring and routing
    - auto-reply in the chosen language
@@ -78,12 +78,12 @@ Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
    - the NIA basics guide (EN + AR, via the `fuerte-arabic` skill)
    - a real gated Vendor Pack form and Careers form
    - a 404 scene, using a film still
-9. **B8:** Plausible, cookieless.
+9. **B8:** Cloudflare Web Analytics, cookieless (decided 2026-10-21 instead of Plausible).
 10. **B10:**
    - Remove the dead real-time 3D code: `components/three/**`, `components/sections/home-scene.tsx`, `app/[locale]/dev/scene`.
    - Remove its packages: three, @react-three/*, postprocessing, detect-gpu.
    - Use the orb loader in Sonner.
-11. **B11:** a nonce-based CSP (the production CSP currently allows `'unsafe-inline'` scripts).
+11. **B11:** decided 2026-10-21 to keep `'unsafe-inline'`: a hash-based CSP is impossible here (34–55 per-page inline Next.js scripts; SRI doesn't run with Turbopack), and nonces would make every page dynamic.
 
 Items in plan section C (client facts) and D (accounts, counsel, domains) are not code; leave them to the user.
 

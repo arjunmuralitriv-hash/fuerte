@@ -38,6 +38,7 @@ const MAX_DPR = 2;
 const CONCURRENCY = 6;
 const EASE = 0.16; // Per-frame easing toward the scroll target: smooths wheel steps without lag.
 const SETTLE_MS = 450; // Scroll stillness before a beat's idle loop takes over.
+const ARRIVE = 0.25; // Distance from beat N, in beats, that still counts as resting on it (its card comes in).
 
 /** The cut for this screen and page direction (client only). */
 function pick(formats: FilmFormats): FilmFormat {
@@ -62,7 +63,8 @@ const LAYER = "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full";
  * contract: the film sits on manifest.beats[N] when section N is centred. Between frames it blends the two nearest,
  * so transitions glide. When scrolling rests on a beat, that beat's idle loop (same first frame, effects running)
  * fades in over the canvas and plays until the visitor scrolls again. Reduced motion and Save-Data load only the beat
- * stills and no loops. Signals "fuerte:scene-ready" for Reveal.
+ * stills and no loops. Signals "fuerte:scene-ready" for Reveal, and "fuerte:film-beat" (detail: N, also <html data-film-beat>)
+ * each time the film lands on beat N, so that beat's card comes in once the camera move has arrived.
  */
 export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -88,6 +90,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     let drawn = -1;
     let settle = 0;
     let looping = -1; // beat whose loop is showing (or loading), -1 for none
+    let arrived = -1; // beat the film is resting on, -1 between beats
 
     // Load frames with a small concurrency limit, decoding each before it can be drawn (no decode jank on scrub).
     const beats = format.beats ?? manifest.beats; // a cut may carry its own beat positions
@@ -211,6 +214,17 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       const target = stills ? frameFor(Math.round(beat)) : frameFor(beat);
       current = current < 0 || stills ? target : current + (target - current) * EASE;
       if (Math.abs(current - drawn) > 0.004 || drawn < 0) draw(current);
+      // Arrived on beat N: the film has caught up with the scroll, which rests near N, and a frame is on screen.
+      const n = Math.round(beat);
+      const at = drawn >= 0 && Math.abs(target - current) < 0.5 && Math.abs(beat - n) < ARRIVE ? n : -1;
+      if (at !== arrived) {
+        arrived = at;
+        if (at < 0) delete root.dataset.filmBeat;
+        else {
+          root.dataset.filmBeat = String(at);
+          window.dispatchEvent(new CustomEvent("fuerte:film-beat", { detail: at }));
+        }
+      }
       if (!stills && Math.abs(target - current) > 0.02) schedule();
     };
     function schedule() {
@@ -242,6 +256,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       removeEventListener("resize", resize);
       removeEventListener("load", whenIdle);
       delete root.dataset.scene;
+      delete root.dataset.filmBeat;
     };
   }, [manifest, theme]);
 

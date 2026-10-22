@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
 
 import { routing } from "@/i18n/routing";
-import { getAllSlugs } from "@/lib/content";
+import { getListedSlugs } from "@/lib/content";
 import { absoluteUrl, localePath } from "@/lib/seo";
 
 const INDEXES = ["/industries", "/insights"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const slugs = [...getAllSlugs(), ...INDEXES];
+  const slugs = [...getListedSlugs(), ...INDEXES];
   return slugs.flatMap((slug) =>
     routing.locales.map((locale) => ({
       url: absoluteUrl(localePath(locale, slug)),

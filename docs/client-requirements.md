@@ -86,7 +86,7 @@ Per-page detail for every placeholder is in [`content-placeholders.md`](content-
 - [ ] 🔴 **Hosting**: Vercel (team account) and domain DNS access
 - [ ] 🔴 **Transactional email**: Resend (or Fuerte's SMTP) with the confirmed domain verified
 - [ ] 🔴 **CRM**: Zoho CRM or HubSpot, with an API/webhook user
-- [ ] 🔴 **Database for leads and consents** in a GCC/Qatar region (Supabase Middle East or Azure Qatar Central)
+- [ ] 🔴 **Database for leads and consents** in Supabase, Mumbai (decided 2026-10-20; Supabase has no Gulf region)
 - [ ] 🔴 **Cloudflare Turnstile** (spam protection on forms)
 - [ ] **Analytics**: Plausible (cookieless). Optionally GA4, Microsoft Clarity and LinkedIn Insight, which load only after consent.
 - [ ] **Google Business Profile**, Bing Places, Apple Business Connect (verified at the office address)

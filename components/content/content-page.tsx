@@ -8,8 +8,8 @@ import { Markdown, Placeholder } from "@/components/content/markdown";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { getFaqs, getPage, getToc, hasPlaceholder, type Page } from "@/lib/content";
-import { articleLd, breadcrumbLd, faqLd, JsonLd, pageMetadata, serviceLd } from "@/lib/seo";
+import { getFaqs, getPage, getPillarServices, getSteps, getToc, hasPlaceholder, PILLARS, type Page } from "@/lib/content";
+import { articleLd, breadcrumbLd, faqLd, howToLd, JsonLd, offerCatalogLd, pageMetadata, serviceLd, SPEAKABLE_CLASS, speakableLd } from "@/lib/seo";
 import { serviceKey, SITE, whatsappHref } from "@/lib/site";
 
 const FORM_KINDS: Record<string, string> = { "/legal/data-request": "data-request", "/vendor-pack": "vendor-pack", "/careers": "careers" };
@@ -17,7 +17,8 @@ const FORM_KINDS: Record<string, string> = { "/legal/data-request": "data-reques
 export function contentMetadata(locale: Locale, slug: string): Metadata {
   const page = getPage(locale, slug);
   if (!page) return {};
-  return pageMetadata({ locale, slug, title: page.fm.metaTitle, description: page.fm.metaDescription });
+  const meta = pageMetadata({ locale, slug, title: page.fm.metaTitle, description: page.fm.metaDescription });
+  return page.fm.unlisted ? { ...meta, robots: { index: false, follow: true } } : meta;
 }
 
 async function crumbsFor(locale: Locale, page: Page): Promise<Crumb[]> {
@@ -39,6 +40,31 @@ async function crumbsFor(locale: Locale, page: Page): Promise<Crumb[]> {
   return crumbs;
 }
 
+/** Structured data for a content page (plan section 6). */
+function pageLd(locale: Locale, page: Page, crumbs: Crumb[], faqs: { q: string; a: string }[], speakable: boolean) {
+  const { slug } = page;
+  const ld: object[] = [breadcrumbLd(locale, crumbs)];
+  if (faqs.length) ld.push(faqLd(faqs));
+  if (page.section === "services") {
+    ld.push(serviceLd(locale, slug, page.h1, page.fm.metaDescription));
+    if (speakable) ld.push(speakableLd(locale, slug, page.h1));
+    const pillar = PILLARS.find((p) => slug === `/services/${p}`);
+    if (slug === "/services") {
+      const entries = PILLARS.map((p) => getPage(locale, `/services/${p}`)).filter((p): p is Page => Boolean(p));
+      ld.push(offerCatalogLd(locale, slug, page.h1, entries.map((p) => ({ page: p, children: getPillarServices(locale, p.slug.split("/")[2]) }))));
+    } else if (pillar) {
+      const children = getPillarServices(locale, pillar);
+      if (children.length) ld.push(offerCatalogLd(locale, slug, page.h1, children.map((p) => ({ page: p }))));
+    }
+  }
+  if (page.section === "insights") {
+    ld.push(articleLd(locale, slug, page.fm));
+    const steps = getSteps(page.body);
+    if (steps.length >= 2) ld.push(howToLd(locale, slug, page.h1, page.fm.metaDescription, steps));
+  }
+  return ld;
+}
+
 /** Standard layout for every Markdown content page. `form` fills the page's "## Form" spec, if it has one. */
 export async function ContentPage({ locale, slug, form }: { locale: Locale; slug: string; form?: React.ReactNode }) {
   const page = getPage(locale, slug);
@@ -51,10 +77,9 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
   const sales = page.section === "services" || page.section === "industries" || page.section === "page";
   const fallback = page.contentLocale !== locale;
   const key = serviceKey(slug);
-  const ld: object[] = [breadcrumbLd(locale, crumbs)];
-  if (faqs.length) ld.push(faqLd(faqs));
-  if (page.section === "services") ld.push(serviceLd(locale, slug, page.h1, page.fm.metaDescription));
-  if (page.section === "insights") ld.push(articleLd(locale, slug, page.fm.title, page.fm.metaDescription));
+  // A service page's opening paragraph is its direct answer: marked speakable once it holds no placeholder.
+  const speakable = page.section === "services" && Boolean(page.lead) && !hasPlaceholder(page.lead);
+  const ld = pageLd(locale, page, crumbs, faqs, speakable);
 
   return (
     <main id="main">
@@ -69,7 +94,7 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
           {fallback && <p className="mt-6 text-small text-muted-foreground">{t("notTranslated")}</p>}
           <div lang={page.contentLocale} dir={page.contentLocale === "ar" ? "rtl" : "ltr"}>
             <h1 className="mt-6 max-w-4xl text-h1">{page.h1}</h1>
-            {page.lead && <Markdown source={page.lead} ctx={{ slug, serviceName: page.h1 }} className="max-w-prose text-muted-foreground [&_p]:text-body-lg" />}
+            {page.lead && <Markdown source={page.lead} ctx={{ slug, serviceName: page.h1 }} className={`max-w-prose text-muted-foreground [&_p]:text-body-lg${speakable ? ` ${SPEAKABLE_CLASS}` : ""}`} />}
           </div>
           {sales && (
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">

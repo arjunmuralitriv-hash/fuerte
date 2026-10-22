@@ -44,7 +44,7 @@ Help us understand how the site is used, so we can improve it.
 | _ga, _ga_* | Google Analytics 4 | Counts visits and measures how pages are used | Up to 2 years [CONFIRM] |
 | _clck, _clsk | Microsoft Clarity | Shows how visitors use pages (heatmaps, anonymised session replays) | Up to 1 year [CONFIRM] |
 
-We also use **Plausible Analytics**, which does not use cookies and does not collect personal data. It runs without consent. [CONFIRM with counsel]
+We also use **Cloudflare Web Analytics**, which does not use cookies or track individual visitors. It runs without consent. [CONFIRM with counsel]
 
 ### Marketing (off until you agree)
 

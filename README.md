@@ -28,6 +28,6 @@ Copy `.env.example` to `.env.local` for lead delivery (Resend, CRM webhook), Tur
 
 - `content/{en,ar}`: page copy as Markdown with front-matter
 - `app/[locale]`: routes; `components/content`: the Markdown page layout
-- `components/three`: the Smart-Building X-ray scene (see its README)
+- `components/sections/scroll-film.tsx` + `lib/film.ts`: the pre-rendered home film (rendered in Blender by `blender/scripts/build_film.py`)
 - `messages/{en,ar}.json`: UI strings
 - `CLAUDE.md`: project rules; `design-system/fuerte/MASTER.md`: design system

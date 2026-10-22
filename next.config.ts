@@ -8,16 +8,20 @@ const LINKEDIN = "https://snap.licdn.com https://px.ads.linkedin.com";
 // Sentry's ingest host, only when a DSN is configured (instrumentation.ts). Speed Insights reports to /_vercel (self).
 const SENTRY_DSN = process.env.SENTRY_DSN ?? "";
 const SENTRY = SENTRY_DSN ? new URL(SENTRY_DSN).origin : "";
+// Cloudflare Web Analytics (cookieless, no consent needed; plan row B8): the beacon script and its report endpoint.
+const CF_ANALYTICS = process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN ? { script: "https://static.cloudflareinsights.com", report: "https://cloudflareinsights.com" } : null;
+// RFQ files upload straight from the browser to Supabase Storage (lib/forms/uploads.ts).
+const SUPABASE = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).origin : "";
 
 // Pages are statically generated, so per-request nonces aren't available: inline scripts are allowed,
 // everything else is an explicit allow-list. Dev mode is left without a CSP (it needs eval).
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}`,
+  `script-src 'self' 'unsafe-inline' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${CF_ANALYTICS ? ` ${CF_ANALYTICS.script}` : ""}`,
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${ANALYTICS} ${LINKEDIN}`,
   "font-src 'self'",
-  `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${SENTRY ? ` ${SENTRY}` : ""}`,
+  `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${SENTRY ? ` ${SENTRY}` : ""}${CF_ANALYTICS ? ` ${CF_ANALYTICS.report}` : ""}${SUPABASE ? ` ${SUPABASE}` : ""}`,
   `frame-src ${TURNSTILE}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -43,15 +47,16 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Inlined into server and browser bundles, so the browser SDK can be dropped entirely when it is empty.
   env: { SENTRY_DSN },
-  experimental: {
-    // RFQ uploads: up to 25 MB per file (lib/forms/actions.ts), plus form fields.
-    serverActions: { bodySizeLimit: "26mb" },
-  },
   async rewrites() {
     // Markdown twins: /en.md and /en/services/cctv.md (plan section 6, GEO).
     return [
       { source: "/:locale(en|ar).md", destination: "/api/md/:locale" },
       { source: "/:locale(en|ar)/:path(.+)\.md", destination: "/api/md/:locale/:path" },
+      // Open Graph cards (app/api/og), outside /api/ so crawlers that obey robots.txt can fetch them.
+      { source: "/og/:locale(en|ar).png", destination: "/api/og/:locale" },
+      { source: "/og/:locale(en|ar)/:path(.+)\.png", destination: "/api/og/:locale/:path" },
+      // IndexNow key file (app/api/indexnow) at the site root. Hex and dashes only, so it cannot shadow llms.txt or robots.txt.
+      { source: "/:key([0-9a-fA-F-]{8,128}).txt", destination: "/api/indexnow/:key" },
     ];
   },
   async headers() {
