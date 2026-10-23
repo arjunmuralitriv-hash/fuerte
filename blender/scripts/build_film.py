@@ -1981,13 +1981,24 @@ def build():
 
 # Idle loop length per beat, in frames: a whole number of the beat's main pulse cycles, so the loop closes cleanly.
 LOOP_FRAMES = (48, 50, 50, 46, 48, 39, 48)
+# Rest points between beats: the composed camera keys inside each transition. A visitor who stops scrolling between
+# two beats sees the film settle on the nearest beat or rest point and that point's idle loop ("m0".."m5").
+MIDS = (96, 196, 275, 340, 398, 492)
+MID_LOOP_FRAMES = 48  # 2 s: closes the 2 s pulses and ripples, and the 1 s beacon
 
 
-def hold_for_loop(scene, beat):
+def loop_span(loop_id):
+    """First frame and length of an idle loop: "0".."6" are the beats, "m0".."m5" the rest points between them."""
+    if loop_id.startswith("m"):
+        return MIDS[int(loop_id[1:])], MID_LOOP_FRAMES
+    return BEATS[int(loop_id)], LOOP_FRAMES[int(loop_id)]
+
+
+def hold_for_loop(scene, loop_id):
     """Freeze everything at the beat's composed frame (camera, effect switches, visibility) except the film clock,
     which keeps running from that frame's time: the beat comes alive (pulses, LEDs, ripples, beacons) while the shot
     holds still. The loop's first frame is the film's beat frame."""
-    f0, length = BEATS[beat], LOOP_FRAMES[beat]
+    f0, length = loop_span(loop_id)
     scene.frame_set(f0)
     for ob in scene.objects:
         if ob.name.startswith(("threat_", "impact_")):
@@ -2044,11 +2055,11 @@ if __name__ == "__main__":
                 picked.append(int(part))
         render(sc, out_dir, w, h, samples, picked, resume=True)
     if "--loop" in ARGS:
-        # --loop <beats> <dir> <w> <h> <samples>: idle loops as PNG frames in <dir>/beat<N>/, beats like "0,1,2".
+        # --loop <ids> <dir> <w> <h> <samples>: idle loops as PNG frames in <dir>/beat<id>/, ids like "0,1,m2".
         # Each beat starts from the saved .blend, since holding a beat strips the film's animation.
         i = ARGS.index("--loop")
         beats, out_dir, w, h, samples = ARGS[i + 1], ARGS[i + 2], int(ARGS[i + 3]), int(ARGS[i + 4]), int(ARGS[i + 5])
-        for n in (int(x) for x in beats.split(",")):
+        for n in beats.split(","):
             bpy.ops.wm.open_mainfile(filepath=str(OUT))
             sc = bpy.context.scene
             sc.render.use_persistent_data = True  # only the clock changes between loop frames

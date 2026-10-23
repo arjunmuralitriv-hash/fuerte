@@ -5,9 +5,10 @@ import { preload } from "react-dom";
 
 /** A cut's frames are `${path}0000.${ext}` … ; with `loops`, each beat N also has a seamless idle loop at `${path}loop-N.mp4`;
  * `beats` overrides the manifest's beat positions for this cut; `version` is added to every URL so a re-render is never
- * served from the browser cache (frames are cached for a week). `video` is the same cut as one video, scrubbed in place of
+ * served from the browser cache (frames are cached for a week). `rests` are frames between beats with their own idle loop
+ * (`loop-m0.mp4` …), so a visitor who stops mid-transition also sees the scene alive. `video` is the same cut as one video, scrubbed in place of
  * the frames when given. */
-export type FilmFormat = { path: string; ext: string; count: number; loops?: boolean; beats?: number[]; version?: string; video?: string };
+export type FilmFormat = { path: string; ext: string; count: number; loops?: boolean; beats?: number[]; version?: string; video?: string; rests?: number[] };
 /**
  * 16:9 for wide screens, 9:16 rendered separately for phones (framed for the copy at the bottom). Wide screens on RTL
  * pages use landscapeRtl when given: the same film composed with the subject on the left, clear of the copy.
@@ -39,6 +40,7 @@ const MAX_DPR = 2;
 const CONCURRENCY = 6;
 const EASE = 0.16; // Per-frame easing toward the scroll target: smooths wheel steps without lag.
 const SETTLE_MS = 450; // Scroll stillness before a beat's idle loop takes over.
+const REST_EASE = 0.06; // Slower easing when the film settles on a rest point by itself: a drift, not a jump.
 const ARRIVE = 0.25; // Distance from beat N, in beats, that still counts as resting on it (its card comes in).
 const FPS = 30; // Frame rate of the cut videos (scripts/encode_film_video.py).
 
@@ -108,7 +110,9 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     let current = -1;
     let drawn = -1;
     let settle = 0;
-    let looping = -1; // beat whose loop is showing (or loading), -1 for none
+    let looping = ""; // id of the loop showing (or loading): "3" for beat 3, "m2" for rest point 2, "" for none
+    let hold = -1; // frame the film settles on while the scroll rests between beats, -1 when following the scroll
+    let holdId = ""; // loop to show once the film reaches `hold`
     let arrived = -1; // beat the film is resting on, -1 between beats
 
     // Load frames with a small concurrency limit, decoding each before it can be drawn (no decode jank on scrub).
@@ -241,19 +245,19 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     };
 
     // Idle loops: fade a beat's loop in once scrolling has rested on it; fade out (and pause) as soon as it moves.
-    const showLoop = (beat: number) => {
-      if (looping === beat) return;
-      looping = beat;
-      video.src = `${format.path}loop-${beat}.mp4${bust(format)}`;
+    const showLoop = (id: string) => {
+      if (looping === id) return;
+      looping = id;
+      video.src = `${format.path}loop-${id}.mp4${bust(format)}`;
       video.oncanplaythrough = () => {
-        if (disposed || looping !== beat) return;
+        if (disposed || looping !== id) return;
         void video.play().then(() => (video.dataset.shown = "true"), () => {});
       };
       video.load();
     };
     const hideLoop = () => {
-      if (looping < 0) return;
-      looping = -1;
+      if (!looping) return;
+      looping = "";
       video.oncanplaythrough = null;
       video.dataset.shown = "false";
     };
@@ -264,8 +268,8 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const tick = () => {
       raf = 0;
       const beat = beatValue();
-      const target = stills ? frameFor(Math.round(beat)) : frameFor(beat);
-      current = current < 0 || stills ? target : current + (target - current) * EASE;
+      const target = hold >= 0 ? hold : stills ? frameFor(Math.round(beat)) : frameFor(beat);
+      current = current < 0 || stills ? target : current + (target - current) * (hold >= 0 ? REST_EASE : EASE);
       if (Math.abs(current - drawn) > 0.004 || drawn < 0) (ready ? seek : draw)(current);
       // Arrived on beat N: the film has caught up with the scroll, which rests near N, and a frame is on screen.
       const n = Math.round(beat);
@@ -279,6 +283,13 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
         }
       }
       if (!stills && Math.abs(target - current) > 0.02) schedule();
+      else if (holdId) {
+        // Settled on the rest point: its loop starts on exactly this frame.
+        current = target;
+        (ready ? seek : draw)(current);
+        showLoop(holdId);
+        holdId = "";
+      }
     };
     function schedule() {
       if (!raf && !disposed) raf = requestAnimationFrame(tick);
@@ -287,16 +298,26 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       schedule();
       if (!loops) return;
       hideLoop();
+      hold = -1;
+      holdId = "";
       clearTimeout(settle);
       settle = window.setTimeout(() => {
         const beat = beatValue();
         const n = Math.round(beat);
-        if (Math.abs(beat - n) < 0.04) showLoop(n);
+        if (Math.abs(beat - n) < 0.04) return showLoop(String(n));
+        if (!format.rests) return;
+        // Resting between beats: settle the film (not the page) on the nearest beat or rest point, then play its loop.
+        const at = frameFor(beat);
+        const points = [...beats.map((f, i) => [f, String(i)] as const), ...format.rests.map((f, i) => [f, `m${i}`] as const)];
+        const [f, id] = points.reduce((a, b) => (Math.abs(b[0] - at) < Math.abs(a[0] - at) ? b : a));
+        hold = f;
+        holdId = id;
+        schedule();
       }, SETTLE_MS);
     };
 
     resize();
-    if (loops) settle = window.setTimeout(() => Math.abs(beatValue() - Math.round(beatValue())) < 0.04 && showLoop(Math.round(beatValue())), 2500);
+    if (loops) settle = window.setTimeout(() => Math.abs(beatValue() - Math.round(beatValue())) < 0.04 && showLoop(String(Math.round(beatValue()))), 2500);
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", resize);
     return () => {
