@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Check, FileCheck2, ShieldAlert } from "lucide-react";
+import { ArrowDown, FileCheck2, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
@@ -71,11 +71,7 @@ export default async function HomePage({ params }: Params) {
           className="pointer-events-none absolute inset-x-0 top-0 -bottom-32 -z-10 mask-b-from-75% bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
         />
         <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
-          <p className="eyebrow flex items-center gap-3 text-muted-foreground">
-            <span aria-hidden className="h-px w-8 bg-primary" />
-            {hero.eyebrow}
-          </p>
-          <h1 id="hero-title" className="mt-4 max-w-4xl text-display">
+          <h1 id="hero-title" className="max-w-4xl text-display">
             {hero.title}
           </h1>
           <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-700">
@@ -83,7 +79,7 @@ export default async function HomePage({ params }: Params) {
             <Markdown source={hero.body} ctx={ctx} className={cn(lead, "mt-2 max-md:[&_.not-prose]:hidden")} />
             {hero.scrollCue && (
               <a href="#beat-1" className="mt-8 inline-flex min-h-11 items-center gap-2 text-small font-medium text-muted-foreground hover:text-foreground md:mt-16">
-                <ArrowDown aria-hidden className="size-4 text-primary-ink motion-safe:animate-bounce" />
+                <ArrowDown aria-hidden className="size-4 text-primary-ink" />
                 {hero.scrollCue}
               </a>
             )}
@@ -101,8 +97,7 @@ export default async function HomePage({ params }: Params) {
             <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
               <Reveal beat={n} className="w-full max-w-xl">
                 <div className="rounded-3xl border bg-background/80 p-5 backdrop-blur-md md:p-8 dark:bg-background/70">
-                  <p className="eyebrow font-mono text-primary-ink">{beat.eyebrow}</p>
-                  <h2 id={`beat-${n}-title`} className="mt-3 text-h2">
+                  <h2 id={`beat-${n}-title`} className="text-h2">
                     {beat.title}
                   </h2>
                   <Markdown source={beat.body} ctx={ctx} className={lead} />
@@ -150,11 +145,10 @@ export default async function HomePage({ params }: Params) {
           <section aria-labelledby="why-title" className="border-y bg-card">
             <div className="container-page section-y">
               <h2 id="why-title" className="max-w-2xl text-h2">{why.title}</h2>
-              <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <ul className="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
                 {whyPoints.map(([, title, text]) => (
-                  <li key={title} className="rounded-2xl border bg-background p-6">
-                    <Check aria-hidden className="size-6 text-primary-ink" />
-                    <p className="mt-4 text-h4">{title}</p>
+                  <li key={title} className="border-t border-foreground/20 pt-5">
+                    <p className="text-h4">{title}</p>
                     <p className="mt-2 text-small text-muted-foreground">{text}</p>
                   </li>
                 ))}
@@ -167,15 +161,19 @@ export default async function HomePage({ params }: Params) {
         <div className="container-page grid gap-4 section-y md:grid-cols-2">
           {procurement && (
             <div className="flex flex-col rounded-2xl border bg-card p-6 elevation-1 md:p-8">
-              <FileCheck2 aria-hidden className="size-6 text-primary-ink" />
-              <h2 className="mt-4 text-h3">{procurement.title}</h2>
+              <h2 className="flex items-center gap-3 text-h3">
+                <FileCheck2 aria-hidden className="size-6 shrink-0 text-primary-ink" />
+                {procurement.title}
+              </h2>
               <Markdown source={procurement.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
             </div>
           )}
           {attack && (
             <div className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8">
-              <ShieldAlert aria-hidden className="size-6 text-primary-ink" />
-              <h2 className="mt-4 text-h3">{attack.title}</h2>
+              <h2 className="flex items-center gap-3 text-h3">
+                <ShieldAlert aria-hidden className="size-6 shrink-0 text-primary-ink" />
+                {attack.title}
+              </h2>
               <Markdown source={attack.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
             </div>
           )}
@@ -184,7 +182,7 @@ export default async function HomePage({ params }: Params) {
         {facts.length > 0 && (
           <section aria-labelledby="facts-title" className="container-page pb-16 md:pb-24">
             <div className="rounded-2xl border p-6 md:p-8">
-              <h2 id="facts-title" className="eyebrow text-muted-foreground">{t("home.atAGlance")}</h2>
+              <h2 id="facts-title" className="eyebrow font-sans text-muted-foreground">{t("home.atAGlance")}</h2>
               <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
                 {facts.filter((f) => showClaim(f.value)).map((f) => (
                   <div key={f.label}>
@@ -195,9 +193,8 @@ export default async function HomePage({ params }: Params) {
                   </div>
                 ))}
               </dl>
-              <Link href="/about" className="mt-8 inline-flex min-h-11 items-center gap-2 text-small font-semibold text-primary-ink">
+              <Link href="/about" className="mt-8 inline-flex min-h-11 items-center text-small font-semibold text-primary-ink underline decoration-primary/40 underline-offset-4 hover:decoration-primary">
                 {t("nav.about")}
-                <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
               </Link>
             </div>
           </section>

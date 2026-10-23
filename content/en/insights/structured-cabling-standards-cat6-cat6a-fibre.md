@@ -118,4 +118,4 @@ Fuerte designs, installs and certifies [structured cabling in Doha and across Qa
 
 - **Primary CTA:** Book a free cabling survey
 - **Secondary CTA:** Try the cabling points estimator
-- **Tertiary link:** [Structured cabling services →](/services/structured-cabling)
+- **Tertiary link:** [Structured cabling services](/services/structured-cabling)

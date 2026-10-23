@@ -1,4 +1,4 @@
-import { ArrowRight, MessageCircle, Phone } from "lucide-react";
+import { MessageCircle, Phone } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -100,7 +100,6 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href={{ pathname: "/contact", query: { type: "survey", service: key } }} className={buttonVariants({ size: "xl" })}>
                 {cta("survey")}
-                <ArrowRight aria-hidden data-icon="inline-end" className="rtl:-scale-x-100" />
               </Link>
               <Link
                 href={{ pathname: "/contact", query: { type: "quote", service: key } }}

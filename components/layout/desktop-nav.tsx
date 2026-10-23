@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
@@ -113,7 +113,6 @@ export function DesktopNav({ nav }: { nav: Nav }) {
             <>
               <Link href="/services" onClick={close} className={`${allLink} me-auto`}>
                 {t("allServices")}
-                <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
               </Link>
               <Link href="/vendor-pack" onClick={close} className={footerLink}>
                 {t("vendorPack")}
@@ -135,7 +134,6 @@ export function DesktopNav({ nav }: { nav: Nav }) {
             </div>,
             <Link href="/industries" onClick={close} className={allLink}>
               {t("allIndustries")}
-              <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
             </Link>,
           )}
         </li>

@@ -17,16 +17,18 @@ const BEAT_MAX_WAIT = 2500;
  */
 export function Reveal({ beat, className, children }: { beat?: number; className?: string; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(false);
+  // Unset on the server, so the copy is in the HTML visibly; the script hides it at mount (off screen) and reveals it.
+  const [state, setState] = useState<"pending" | "shown">();
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    setState((s) => s ?? "pending");
     const pause = matchMedia("(width < 48rem)").matches ? 1200 : 900;
     let timer: number | undefined;
     const showIn = (ms: number) => {
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => setShown(true), ms);
+      timer = window.setTimeout(() => setState("shown"), ms);
     };
 
     const io = new IntersectionObserver(
@@ -55,7 +57,7 @@ export function Reveal({ beat, className, children }: { beat?: number; className
   }, [beat]);
 
   return (
-    <div ref={ref} data-reveal={shown ? "shown" : "pending"} className={className}>
+    <div ref={ref} data-reveal={state} className={className}>
       {children}
     </div>
   );

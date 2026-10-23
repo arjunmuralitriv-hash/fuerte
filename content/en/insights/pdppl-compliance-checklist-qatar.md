@@ -155,4 +155,4 @@ Fuerte's [governance, risk and compliance](/services/grc) team assesses your pos
 
 - **Primary CTA:** Book a free PDPPL gap call
 - **Secondary CTA:** Download this checklist as a PDF
-- **Tertiary link:** [GRC services →](/services/grc)
+- **Tertiary link:** [GRC services](/services/grc)

@@ -1,4 +1,4 @@
-import { ArrowRight, MessageCircle, Plus } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -75,7 +75,6 @@ export async function Markdown({ source, ctx, className }: { source: string; ctx
         {spec.primary && (
           <Link href={{ pathname: "/contact", query: { type: "survey", service: key } }} className={buttonVariants({ size: "xl" })}>
             {label(spec.primary)}
-            <ArrowRight data-icon="inline-end" aria-hidden className="rtl:-scale-x-100" />
           </Link>
         )}
         {spec.secondary && (

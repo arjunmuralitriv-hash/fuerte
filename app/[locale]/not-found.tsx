@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -25,13 +24,11 @@ export default async function NotFound() {
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-background from-25% via-background/70 via-55% to-background/10 md:bg-linear-to-r md:from-background md:from-20% md:via-background/70 md:via-50% md:to-transparent md:rtl:bg-linear-to-l" />
 
       <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-24 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
-        <p className="eyebrow font-mono text-primary-ink">404</p>
-        <h1 className="mt-3 max-w-3xl text-h1">{t("title")}</h1>
+        <h1 className="max-w-3xl text-h1">{t("title")}</h1>
         <p className="mt-6 max-w-prose text-body-lg text-muted-foreground">{t("body")}</p>
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
           <Link href="/" className={buttonVariants({ size: "xl" })}>
             {t("home")}
-            <ArrowRight aria-hidden data-icon="inline-end" className="rtl:-scale-x-100" />
           </Link>
           <Link href="/services" className={buttonVariants({ size: "xl", variant: "outline", className: "border-foreground/25" })}>
             {t("services")}

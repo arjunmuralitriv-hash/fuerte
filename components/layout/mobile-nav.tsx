@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ChevronLeft, ChevronRight, Menu, MessageCircle, Phone, ShieldAlert, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, MessageCircle, Phone, ShieldAlert, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
@@ -49,7 +49,6 @@ export function MobileNav({ nav }: { nav: Nav }) {
   const all = (href: string, label: string) => (
     <Link href={href} onClick={close} className="mt-6 inline-flex min-h-11 items-center gap-1.5 text-body font-medium text-primary-ink">
       {label}
-      <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
     </Link>
   );
 
