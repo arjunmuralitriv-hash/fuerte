@@ -65,8 +65,10 @@ const LAYER = "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full";
 /**
  * Pre-rendered film scrubbed by scroll (docs/film-plan.md), fixed behind the page and driven by the data-beat
  * contract: the film sits on manifest.beats[N] when section N is centred. Between frames it blends the two nearest,
- * so transitions glide. When the cut has a video, the canvas shows only the beat stills while the whole video downloads,
- * then the video takes over and is scrubbed instead (?film=frames keeps the frames, to compare). When scrolling rests
+ * so transitions glide. When the cut has a video, it is scrubbed instead (?film=frames keeps the frames, to compare):
+ * Chromium and Firefox play it while it downloads, from the opening frames on, and hold the newest frame that has
+ * arrived if the scroll runs ahead; WebKit (iOS stalls on seeks into a partly loaded video) waits for the whole file.
+ * Until the video can show the current position, the canvas shows the beat stills. When scrolling rests
  * on a beat, that beat's idle loop (same first frame, effects running) fades in over the film and plays until the
  * visitor scrolls again. Reduced motion and Save-Data load only the beat stills and no loops. Signals
  * "fuerte:film-beat" (detail: N, also <html data-film-beat>)
@@ -103,6 +105,9 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const abort = new AbortController();
     let ready = false; // the film video is on screen and scrubbed instead of the canvas
     let seekFrame = -1; // frame the film video was last asked to show
+    // WebKit gets the whole file first; elsewhere the video streams and is used as far as it has arrived.
+    const whole = /AppleWebKit/.test(navigator.userAgent) && !/Chrome\/|Chromium\/|Edg\/|Android/.test(navigator.userAgent);
+    let filmLoaded = false;
     const frames: (HTMLImageElement | undefined)[] = new Array(format.count);
     const sections = [...document.querySelectorAll<HTMLElement>("[data-beat]")].sort((a, b) => Number(a.dataset.beat) - Number(b.dataset.beat));
     let disposed = false;
@@ -149,21 +154,27 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       queue.push(...loadOrder(format.count, beats).filter((i) => !beats.includes(i)));
       for (let k = 0; k < CONCURRENCY; k++) pump();
     };
-    const loadFilm = (url: string) =>
+    const loadFilm = (url: string) => {
+      film.onloadeddata = () => {
+        // Playing once lets iOS paint the frames it seeks to; muted inline play is allowed, and refused in Low Power Mode.
+        void film.play().catch(() => {}).finally(() => {
+          film.pause();
+          filmLoaded = true;
+          schedule();
+        });
+      };
+      film.onerror = loadFrames;
+      // As more of a streaming video arrives, a film held at the newest frame moves on to the scroll position.
+      film.onprogress = schedule;
+      if (!whole) {
+        film.src = url;
+        return;
+      }
       fetch(url, { signal: abort.signal })
         .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${r.status}`))))
-        .then((blob) => {
-          film.onloadeddata = () => {
-            // Playing once lets iOS paint the frames it seeks to; muted inline play is allowed, and refused in Low Power Mode.
-            void film.play().catch(() => {}).finally(() => {
-              film.pause();
-              seek(Math.max(current, 0));
-            });
-          };
-          film.onerror = loadFrames;
-          film.src = URL.createObjectURL(blob);
-        })
+        .then((blob) => (film.src = URL.createObjectURL(blob)))
         .catch(loadFrames);
+    };
     const whenIdle = () => ("requestIdleCallback" in window ? requestIdleCallback(startRest, { timeout: 2000 }) : setTimeout(startRest, 200));
     void fetchFrame(queue.shift()!);
     if (document.readyState === "complete") whenIdle();
@@ -230,10 +241,17 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     };
 
     // Show a frame of the film video: one seek at a time, each starting from the newest scroll position once the last lands.
+    // Last frame of the streaming video that has arrived, counting only the range from the start.
+    const lastArrived = () => {
+      if (whole) return format.count - 1;
+      const b = film.buffered;
+      for (let i = 0; i < b.length; i++) if (b.start(i) <= 0.05) return Math.floor(b.end(i) * FPS) - 1;
+      return -1;
+    };
     const seek = (pos: number) => {
       drawn = pos;
-      const f = Math.round(pos);
-      if (f === seekFrame || film.seeking) return;
+      const f = Math.min(Math.round(pos), lastArrived());
+      if (f < 0 || f === seekFrame || film.seeking) return;
       seekFrame = f;
       film.currentTime = (f + 0.5) / FPS;
     };
@@ -270,7 +288,9 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       const beat = beatValue();
       const target = hold >= 0 ? hold : stills ? frameFor(Math.round(beat)) : frameFor(beat);
       current = current < 0 || stills ? target : current + (target - current) * (hold >= 0 ? REST_EASE : EASE);
-      if (Math.abs(current - drawn) > 0.004 || drawn < 0) (ready ? seek : draw)(current);
+      // The video takes over once it can show the current position; until then the canvas keeps the stills.
+      if (!ready && filmLoaded && !film.seeking && seekFrame < 0 && lastArrived() >= Math.round(current)) seek(current);
+      if (Math.abs(current - drawn) > 0.004 || drawn < 0 || (ready && seekFrame < Math.round(current))) (ready ? seek : draw)(current);
       // Arrived on beat N: the film has caught up with the scroll, which rests near N, and a frame is on screen.
       const n = Math.round(beat);
       const at = drawn >= 0 && Math.abs(target - current) < 0.5 && Math.abs(beat - n) < ARRIVE ? n : -1;
@@ -326,7 +346,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       clearTimeout(settle);
       hideLoop();
       abort.abort();
-      film.onloadeddata = film.onseeked = film.onerror = null;
+      film.onloadeddata = film.onseeked = film.onerror = film.onprogress = null;
       film.dataset.shown = "false";
       if (film.src) URL.revokeObjectURL(film.src);
       film.removeAttribute("src");
