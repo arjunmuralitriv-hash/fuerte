@@ -1,6 +1,7 @@
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
+import Script from "next/script";
+import { Geologica, IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic, Readex_Pro } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -9,6 +10,7 @@ import { ConsentManager } from "@/components/consent/consent-manager";
 import { MobileCtaBar } from "@/components/layout/mobile-cta-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SourceCapture } from "@/components/layout/source-capture";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DirectionProvider } from "@/components/ui/direction";
 import { routing } from "@/i18n/routing";
@@ -16,7 +18,8 @@ import { JsonLd, organizationLd, websiteLd } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 import "../globals.css";
 
-// One family across scripts (plan section 12). Weights limited to those the type scale uses.
+// Body: IBM Plex across scripts (plan section 12). Headings: a display face per script, Geologica (Latin) and
+// Readex Pro (Arabic), so heads are not the body face at 600. Weights limited to those the type scale uses.
 const latin = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
@@ -27,6 +30,19 @@ const arabic = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
   weight: ["300", "400", "500", "600"],
   variable: "--font-arabic",
+  display: "swap",
+  preload: false,
+});
+const displayLatin = Geologica({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-display-latin",
+  display: "swap",
+});
+const displayArabic = Readex_Pro({
+  subsets: ["arabic"],
+  weight: ["500", "600"],
+  variable: "--font-display-arabic",
   display: "swap",
   preload: false,
 });
@@ -72,7 +88,7 @@ export default async function LocaleLayout({
       lang={locale}
       dir={dir}
       suppressHydrationWarning
-      className={`${latin.variable} ${arabic.variable} ${mono.variable}`}
+      className={`${latin.variable} ${arabic.variable} ${displayLatin.variable} ${displayArabic.variable} ${mono.variable}`}
     >
       <body className="min-h-dvh pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <JsonLd data={[organizationLd(locale, t("companyName"), meta("description")), websiteLd(locale, t("companyName"))]} />
@@ -90,11 +106,20 @@ export default async function LocaleLayout({
               <SiteFooter />
               <MobileCtaBar />
               <ConsentManager />
+              <SourceCapture />
             </DirectionProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
         {/* Cookieless Core Web Vitals (plan section 10); reports to the site's own /_vercel endpoint. */}
         <SpeedInsights />
+        {/* Cloudflare Web Analytics: cookieless page statistics, no consent needed (plan row B8; cookie notice). */}
+        {process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN && (
+          <Script
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={JSON.stringify({ token: process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN })}
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );

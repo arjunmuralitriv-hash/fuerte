@@ -37,7 +37,7 @@ An annual maintenance contract (AMC) from Fuerte keeps your IT and ELV systems w
 
 ## How do the Bronze, Silver and Gold plans differ?
 
-Each plan sets the response time, the number of preventive visits and the hours of cover. [Compare AMC plans →](/amc-plans)
+Each plan sets the response time, the number of preventive visits and the hours of cover. [Compare AMC plans](/amc-plans)
 
 ## Can you take over maintenance of systems someone else installed?
 

@@ -1,18 +1,20 @@
 "use client";
 
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { Link, usePathname } from "@/i18n/navigation";
-import type { Nav } from "@/lib/nav";
-import { cn } from "@/lib/utils";
+import type { Nav, NavLink } from "@/lib/nav";
 
 type Menu = "services" | "industries";
 
-const top = "inline-flex h-11 items-center gap-1 rounded-lg px-3 text-small font-medium transition-colors hover:bg-muted aria-expanded:bg-muted";
-const item = "block rounded-lg px-3 py-2 text-small leading-snug text-muted-foreground hover:bg-muted hover:text-foreground";
-const more = "inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-small font-semibold text-primary-ink hover:bg-muted";
+const top =
+  "inline-flex h-10 items-center gap-1.5 rounded-lg border border-transparent px-3 text-small font-medium transition-colors hover:bg-muted aria-expanded:border-border aria-expanded:bg-muted";
+const header = "block text-small text-muted-foreground";
+const footerLink = "inline-flex min-h-11 items-center text-small text-muted-foreground transition-colors hover:text-foreground";
+const allLink = "inline-flex min-h-11 items-center gap-1.5 text-small font-medium text-primary-ink";
+// Class strings are joined by hand, not cn(): its tailwind-merge logic reads text-small as a colour and drops it next to one.
 
 /**
  * Disclosure-pattern menus (button + panel), not an ARIA menu: links stay in the normal tab order.
@@ -53,94 +55,92 @@ export function DesktopNav({ nav }: { nav: Nav }) {
       aria-expanded={open === menu}
       aria-controls={`menu-${menu}`}
       onClick={() => setOpen(open === menu ? null : menu)}
-      className={cn(top, active(href) && "text-primary-ink")}
+      className={`${top}${active(href) ? " text-primary-ink" : ""}`}
     >
       {label}
-      <ChevronDown aria-hidden className={cn("size-4 text-muted-foreground transition-transform", open === menu && "rotate-180")} />
+      <ChevronsUpDown aria-hidden className="size-3.5 text-muted-foreground" />
     </button>
   );
 
-  const panel = "absolute inset-x-0 top-full border-b bg-popover text-popover-foreground elevation-3";
-  const [tech, dc, elv, cyber, ...rest] = nav.pillars;
+  /** A menu entry: title, with its one-line description underneath when it has one. */
+  const entry = (link: NavLink) => (
+    <li key={link.href}>
+      <Link
+        href={link.href}
+        onClick={close}
+        aria-current={pathname === link.href ? "page" : undefined}
+        className="-mx-2 block rounded-lg px-2 py-2 transition-colors hover:bg-muted"
+      >
+        <span className={`block text-small font-medium${pathname === link.href ? " text-primary-ink" : ""}`}>{link.label}</span>
+        {link.description && <span className="mt-0.5 block text-small text-muted-foreground">{link.description}</span>}
+      </Link>
+    </li>
+  );
+
+  /** Floating panel under the header: hairline-divided cells (gap-px over the border colour) and a footer row. */
+  const panel = (menu: Menu, cells: React.ReactNode, footer: React.ReactNode) => (
+    <div id={`menu-${menu}`} hidden={open !== menu} className="absolute inset-x-0 top-full pt-2">
+      <div className="container-page">
+        <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain rounded-2xl border bg-popover text-popover-foreground elevation-3">
+          {cells}
+          <div className="flex flex-wrap items-center gap-x-6 border-t px-6 py-1">{footer}</div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <nav ref={root} aria-label={t("label")} className="hidden lg:block">
       <ul className="flex items-center gap-1">
         <li>
           {trigger("services", t("services"), "/services")}
-          <div id="menu-services" hidden={open !== "services"} className={panel}>
-            <div className="container-page grid grid-cols-4 gap-x-6 py-8">
-              {[tech, dc, elv, cyber].map((pillar) => (
-                <div key={pillar.href}>
-                  <Link href={pillar.href} onClick={close} className="block rounded-lg px-3 py-2 text-small font-semibold hover:bg-muted">
-                    {pillar.label}
-                  </Link>
-                  <ul className="mt-1">
-                    {pillar.children.map((child) => (
-                      <li key={child.href}>
-                        <Link
-                          href={child.href}
-                          onClick={close}
-                          aria-current={pathname === child.href ? "page" : undefined}
-                          className={cn(item, pathname === child.href && "text-primary-ink")}
-                        >
-                          {child.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+          {panel(
+            "services",
+            <div className="grid grid-cols-5 gap-px bg-border">
+              {nav.menu.map((column) => (
+                <div key={column.label} className="bg-popover p-5 xl:p-6">
+                  {column.href ? (
+                    <Link href={column.href} onClick={close} className={`${header} hover:text-foreground`}>
+                      {column.label}
+                    </Link>
+                  ) : (
+                    <p className={header}>{column.label}</p>
+                  )}
+                  <ul className="mt-4 space-y-1">{column.links.map(entry)}</ul>
                 </div>
               ))}
-            </div>
-            <div className="border-t bg-muted/50">
-              <div className="container-page flex flex-wrap items-center gap-2 py-3">
-                {rest.map((pillar) => (
-                  <Link key={pillar.href} href={pillar.href} onClick={close} className="inline-flex min-h-11 items-center rounded-lg px-3 text-small font-semibold hover:bg-background">
-                    {pillar.label}
-                  </Link>
-                ))}
-                <Link href="/services" onClick={close} className={cn(more, "ms-auto hover:bg-background")}>
-                  {t("allServices")}
-                  <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
-                </Link>
-              </div>
-            </div>
-          </div>
+            </div>,
+            <>
+              <Link href="/services" onClick={close} className={`${allLink} me-auto`}>
+                {t("allServices")}
+              </Link>
+              <Link href="/vendor-pack" onClick={close} className={footerLink}>
+                {t("vendorPack")}
+              </Link>
+              <Link href="/contact" onClick={close} className={footerLink}>
+                {t("contact")}
+              </Link>
+            </>,
+          )}
         </li>
 
         <li>
           {trigger("industries", t("industries"), "/industries")}
-          <div id="menu-industries" hidden={open !== "industries"} className={panel}>
-            <div className="container-page py-8">
-              <ul className="grid grid-cols-4 gap-1">
-                {nav.industries.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      onClick={close}
-                      aria-current={pathname === link.href ? "page" : undefined}
-                      className={cn(item, "text-body", pathname === link.href && "text-primary-ink")}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/industries" onClick={close} className={cn(more, "mt-4")}>
-                {t("allIndustries")}
-                <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
-              </Link>
-            </div>
-          </div>
+          {panel(
+            "industries",
+            <div className="bg-popover p-6">
+              <p className={header}>{t("industries")}</p>
+              <ul className="mt-4 grid grid-cols-4 gap-x-6 gap-y-1">{nav.industries.map(entry)}</ul>
+            </div>,
+            <Link href="/industries" onClick={close} className={allLink}>
+              {t("allIndustries")}
+            </Link>,
+          )}
         </li>
 
         {nav.links.map((link) => (
           <li key={link.href}>
-            <Link
-              href={link.href}
-              aria-current={active(link.href) ? "page" : undefined}
-              className={cn(top, active(link.href) && "text-primary-ink")}
-            >
+            <Link href={link.href} aria-current={active(link.href) ? "page" : undefined} className={`${top}${active(link.href) ? " text-primary-ink" : ""}`}>
               {link.label}
             </Link>
           </li>

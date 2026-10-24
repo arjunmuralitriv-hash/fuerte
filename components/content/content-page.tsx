@@ -1,10 +1,13 @@
-import { ArrowRight, MessageCircle, Phone } from "lucide-react";
+import { MessageCircle, Phone } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { Breadcrumbs, type Crumb } from "@/components/content/breadcrumbs";
 import { Markdown, Placeholder } from "@/components/content/markdown";
+import { ReadingProgress } from "@/components/content/reading-progress";
+import { Toc } from "@/components/content/toc";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -17,7 +20,8 @@ const FORM_KINDS: Record<string, string> = { "/legal/data-request": "data-reques
 export function contentMetadata(locale: Locale, slug: string): Metadata {
   const page = getPage(locale, slug);
   if (!page) return {};
-  return pageMetadata({ locale, slug, title: page.fm.metaTitle, description: page.fm.metaDescription });
+  const meta = pageMetadata({ locale, slug, title: page.fm.metaTitle, description: page.fm.metaDescription });
+  return page.fm.unlisted ? { ...meta, robots: { index: false, follow: true } } : meta;
 }
 
 async function crumbsFor(locale: Locale, page: Page): Promise<Crumb[]> {
@@ -99,7 +103,6 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href={{ pathname: "/contact", query: { type: "survey", service: key } }} className={buttonVariants({ size: "xl" })}>
                 {cta("survey")}
-                <ArrowRight aria-hidden data-icon="inline-end" className="rtl:-scale-x-100" />
               </Link>
               <Link
                 href={{ pathname: "/contact", query: { type: "quote", service: key } }}
@@ -113,31 +116,25 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
       </header>
 
       <div className="container-page grid gap-12 py-12 md:py-16 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
-        <article lang={page.contentLocale} dir={page.contentLocale === "ar" ? "rtl" : "ltr"} className="min-w-0 max-w-prose">
+        <article id="article" lang={page.contentLocale} dir={page.contentLocale === "ar" ? "rtl" : "ltr"} className="min-w-0 max-w-prose">
           {hasPlaceholder(page.lead + page.body) && process.env.VERCEL_ENV !== "production" && (
             <p className="mb-10 text-small text-muted-foreground">
               <Placeholder>CONFIRM</Placeholder> {t("draftNotice")}
             </p>
           )}
-          <Markdown source={page.body} ctx={{ slug, serviceName: page.h1, formKind: FORM_KINDS[slug], form }} />
+          {/* Legal text stays still; everything else reveals block by block as it is read. */}
+          {slug.startsWith("/legal/") ? (
+            <Markdown source={page.body} ctx={{ slug, serviceName: page.h1, formKind: FORM_KINDS[slug], form }} />
+          ) : (
+            <ScrollReveal selector=":scope > div > *">
+              <Markdown source={page.body} ctx={{ slug, serviceName: page.h1, formKind: FORM_KINDS[slug], form }} />
+            </ScrollReveal>
+          )}
         </article>
 
         <aside className="hidden lg:block">
           <div className="sticky top-24 flex flex-col gap-6">
-            {toc.length >= 3 && (
-              <nav aria-label={t("onThisPage")} className="rounded-2xl border bg-card p-5">
-                <p className="eyebrow text-muted-foreground">{t("onThisPage")}</p>
-                <ul className="mt-3 space-y-1">
-                  {toc.map((h) => (
-                    <li key={h.id}>
-                      <a href={`#${h.id}`} className="block rounded-md py-1.5 text-small text-muted-foreground hover:text-foreground">
-                        {h.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            )}
+            {toc.length >= 3 && <Toc items={toc} label={t("onThisPage")} />}
             <div className="rounded-2xl border bg-card p-5 elevation-1">
               <p className="text-h4">{t("askTitle")}</p>
               <p className="mt-2 text-small text-muted-foreground">{t("askBody")}</p>
@@ -164,6 +161,7 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
           </div>
         </aside>
       </div>
+      {slug.startsWith("/insights/") && <ReadingProgress target="article" />}
     </main>
   );
 }

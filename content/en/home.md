@@ -33,7 +33,7 @@ One integrated IT, ELV and cyber security contractor in Qatar. We design, build,
 
 Every camera, phone, screen and server depends on the cable behind the wall. We design and install certified Cat6, Cat6A and fibre backbones, then build the switching, routing, firewall and Wi-Fi layers on top.
 
-[Explore network and cabling →](/services/technology)
+[Explore network and cabling](/services/technology)
 
 ---
 
@@ -45,7 +45,7 @@ Every camera, phone, screen and server depends on the cable behind the wall. We 
 
 Server rooms and modular data centers built for uptime: racks, raised floor, hot and cold aisle containment, UPS, precision cooling and FM-200 fire suppression. Monitored, documented and ready for audit.
 
-[Explore data center services →](/services/data-center)
+[Explore data center services](/services/data-center)
 
 ---
 
@@ -57,7 +57,7 @@ Server rooms and modular data centers built for uptime: racks, raised floor, hot
 
 CCTV with an intelligent command and control center, access control, fire alarm, public address, BMS and smart meeting rooms. Designed together, so they work together.
 
-[Explore ELV systems →](/services/elv)
+[Explore ELV systems](/services/elv)
 
 ---
 
@@ -69,7 +69,7 @@ CCTV with an intelligent command and control center, access control, fire alarm,
 
 Penetration testing, 24/7 managed security monitoring, staff awareness training and PDPPL compliance support. The same team that built your network helps protect it.
 
-[Explore cyber security →](/services/cyber-security)
+[Explore cyber security](/services/cyber-security)
 
 ---
 
@@ -96,7 +96,9 @@ Annual maintenance contracts with clear response times, preventive visits and a 
 
 **Testimonial:** [PLACEHOLDER: one verified client quote with name, title and organisation, used with written permission]
 
-[See AMC plans →](/amc-plans) · [Resource augmentation →](/services/resource-augmentation)
+[See AMC plans](/amc-plans)
+
+[Resource augmentation](/services/resource-augmentation)
 
 ---
 
@@ -129,15 +131,15 @@ Government entities, banks, schools and universities, hotels and malls, oil and 
 - **One support line.** When something stops working, you call one number, not five subcontractors.
 - **Security built in.** Every system we install is hardened before handover, not after an incident.
 
-[About Fuerte →](/about)
+[About Fuerte](/about)
 
 ### Procurement-ready
 
-Need our CR, certificates and company profile for a tender? [Download the vendor pack →](/vendor-pack)
+Need our CR, certificates and company profile for a tender? [Download the vendor pack](/vendor-pack)
 
 ### Under attack right now?
 
-Call our incident response line: +974 7125 8588 [CONFIRM: dedicated 24/7 emergency number]. [Emergency cyber response →](/emergency-cyber-response)
+Call our incident response line: +974 7125 8588 [CONFIRM: dedicated 24/7 emergency number]. [Emergency cyber response](/emergency-cyber-response)
 
 ---
 

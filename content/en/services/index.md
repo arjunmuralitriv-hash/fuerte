@@ -52,7 +52,7 @@ Find the gaps, watch for threats, train your people, prove compliance.
 Certified IT and ELV engineers in your team, on fixed-cost or time-and-materials terms.
 
 ### [AMC and support](/services/amc)
-Preventive maintenance and fast response under a clear service level agreement. [Compare AMC plans →](/amc-plans)
+Preventive maintenance and fast response under a clear service level agreement. [Compare AMC plans](/amc-plans)
 
 ## How we deliver every project
 

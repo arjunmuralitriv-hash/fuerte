@@ -131,4 +131,4 @@ Fuerte designs CCTV systems to SSD requirements and prepares the submission pack
 
 - **Primary CTA:** Book a free CCTV site survey
 - **Secondary CTA:** Request a CCTV quote
-- **Tertiary link:** [CCTV and command and control center services →](/services/cctv)
+- **Tertiary link:** [CCTV and command and control center services](/services/cctv)

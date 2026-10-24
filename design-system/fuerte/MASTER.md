@@ -60,6 +60,26 @@ Body links use `--foreground` with a red underline. No gradients other than redâ
 - Elevation (light only): `--shadow-1/2/3`. Dark mode lifts with lighter surfaces, not shadows.
 - Motion: 150 / 250 / 400 / 700ms; entrance easing `cubic-bezier(0.22, 1, 0.36, 1)`. Everything collapses under `prefers-reduced-motion`.
 
+### Motion: which tool does what
+
+Tokens for all three live in `lib/motion.ts` (`DURATION`, `EASE_ENTRANCE`, `EASE_EXIT`, `SPRING`); never type a duration or curve inline.
+
+| Job | Tool |
+|---|---|
+| Hover, focus, colour and simple fades that need no JavaScript | CSS transitions (`transition-colors`, `transition-opacity`), tokens from `globals.css` |
+| **Animation**: authored sequences: timelines, staggers, SVG line draws (`svg.createDrawable`), text splits (`splitText`), scroll-linked scenes (`onScroll`) | **anime.js** (`animejs` v4) |
+| **Motion control**: interface state: enter/exit and `AnimatePresence`, press/hover/drag gestures, layout changes, springs, reduced-motion switches | **Motion** (`motion/react`) |
+
+Rules:
+- Both libraries load only in client components below the fold. The LCP headline never waits on either.
+- Motion: `m.*` components from `motion/react-m`, wrapped in `components/motion/motion-provider.tsx` around just the part that uses them (never the whole layout), so other pages pay nothing. One-off imperative moves (a step or screen sliding in) use `animate` from `motion/mini` with `transform` keyframes. Durations go through `seconds()`.
+- The shared pieces: `ScrollReveal` (`components/motion/scroll-reveal.tsx`, anime.js) is the one scroll reveal; mark blocks with `data-rise` or pass a `selector`.
+- anime.js: import only the functions used (`import { animate, stagger } from "animejs"`). Create animations inside `createScope({ root })` in a `useEffect`, and call `scope.revert()` on cleanup. Check `prefersReducedMotion()` first and jump to the end state.
+- Animate `transform` and `opacity` only. Exits run at about two thirds of the entrance. No bounce or overshoot on UI state.
+- Content is visible in the server HTML. Hide it only from script after mount, never with an SSR `initial={{ opacity: 0 }}`.
+- One reveal per view at most. The scroll film is the page's motion; copy and UI stay quiet around it.
+- Arabic: mirror horizontal movement in RTL (`x` from the inline-start side), and never split Arabic text into letters (it breaks joining). Split by word or line only.
+
 ---
 
 ## Component Specs

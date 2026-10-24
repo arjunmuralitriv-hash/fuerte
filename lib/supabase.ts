@@ -10,6 +10,7 @@ export const supabaseConfigured = () => Boolean(url && key);
 
 let client: SupabaseClient | undefined;
 export function supabase() {
-  client ??= createClient(url!, key!, { auth: { persistSession: false, autoRefreshToken: false } });
+  // Only the origin: a URL copied with its /rest/v1/ path would send every table and storage call to the wrong place.
+  client ??= createClient(new URL(url!).origin, key!, { auth: { persistSession: false, autoRefreshToken: false } });
   return client;
 }

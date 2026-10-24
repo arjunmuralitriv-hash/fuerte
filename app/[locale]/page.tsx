@@ -1,10 +1,12 @@
-import { ArrowDown, ArrowRight, Check, FileCheck2, ShieldAlert } from "lucide-react";
+import { ArrowDown, FileCheck2, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { Markdown, Placeholder } from "@/components/content/markdown";
+import { MotionProvider } from "@/components/motion/motion-provider";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { Reveal } from "@/components/sections/reveal";
 import { ScrollFilm } from "@/components/sections/scroll-film";
 import { Link } from "@/i18n/navigation";
@@ -62,7 +64,7 @@ export default async function HomePage({ params }: Params) {
       {/* The pre-rendered film is fixed behind the beat sections and scrubs to their data-beat positions (lib/film.ts). */}
       <ScrollFilm manifest={homeFilm()} />
 
-      {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero waits for the scene (Reveal). */}
+      {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero fades in from first paint, never later (a late fade-in would become the LCP). */}
       <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">
         {/* Scrim behind the copy only: bottom-up on phones (copy sits low), from the text side on wider screens. It runs on
             past the hero and fades out there, so it never ends in a hard edge over the film. */}
@@ -71,69 +73,66 @@ export default async function HomePage({ params }: Params) {
           className="pointer-events-none absolute inset-x-0 top-0 -bottom-32 -z-10 mask-b-from-75% bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
         />
         <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
-          <p className="eyebrow flex items-center gap-3 text-muted-foreground">
-            <span aria-hidden className="h-px w-8 bg-primary" />
-            {hero.eyebrow}
-          </p>
-          <h1 id="hero-title" className="mt-4 max-w-4xl text-display">
+          <h1 id="hero-title" className="max-w-4xl text-display">
             {hero.title}
           </h1>
-          <Reveal waitForScene>
+          <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-700">
             {/* Phones: the sticky CTA bar already offers survey, quote and WhatsApp, so the hero drops its own buttons to leave the scene room. */}
             <Markdown source={hero.body} ctx={ctx} className={cn(lead, "mt-2 max-md:[&_.not-prose]:hidden")} />
             {hero.scrollCue && (
               <a href="#beat-1" className="mt-8 inline-flex min-h-11 items-center gap-2 text-small font-medium text-muted-foreground hover:text-foreground md:mt-16">
-                <ArrowDown aria-hidden className="size-4 text-primary-ink motion-safe:animate-bounce" />
+                <ArrowDown aria-hidden className="size-4 text-primary-ink" />
                 {hero.scrollCue}
               </a>
             )}
-          </Reveal>
+          </div>
         </div>
       </section>
 
-      {/* Beats 1–6: one viewport each, so each layer of the tower is centred while its copy is read. Copy sits on a translucent card for contrast over the scene. */}
-      {beats.map((beat, i) => {
-        const n = i + 1;
-        const proof = n === 5 ? stats.filter((s) => showClaim(s.value)) : [];
-        return (
-          <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
-            {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
-            <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
-              <Reveal beat={n} className="w-full max-w-xl">
-                <div className="rounded-3xl border bg-background/80 p-5 backdrop-blur-md md:p-8 dark:bg-background/70">
-                  <p className="eyebrow font-mono text-primary-ink">{beat.eyebrow}</p>
-                  <h2 id={`beat-${n}-title`} className="mt-3 text-h2">
-                    {beat.title}
-                  </h2>
-                  <Markdown source={beat.body} ctx={ctx} className={lead} />
-                  {proof.length > 0 && (
-                    <dl className="mt-8 grid grid-cols-2 gap-3">
-                      {proof.map((s) => (
-                        <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end gap-1 rounded-2xl border bg-card p-4">
-                          <dt className="text-small text-muted-foreground">{s.label}</dt>
-                          <dd className="text-h3 font-semibold tabular-nums">
-                            <Value text={s.value} />
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
-                </div>
-              </Reveal>
-            </div>
-          </section>
-        );
-      })}
+      {/* Beats 1–6: one viewport each, so each layer of the tower is centred while its copy is read. Copy sits on a near-opaque card (no blur: blurring the moving film costs every frame). */}
+      <MotionProvider>
+        {beats.map((beat, i) => {
+          const n = i + 1;
+          const proof = n === 5 ? stats.filter((s) => showClaim(s.value)) : [];
+          return (
+            <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
+              {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
+              <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
+                <Reveal beat={n} className="w-full max-w-xl">
+                  <div className="rounded-3xl border bg-background/90 p-5 md:p-8 dark:bg-background/85">
+                    <h2 id={`beat-${n}-title`} className="text-h2">
+                      {beat.title}
+                    </h2>
+                    <Markdown source={beat.body} ctx={ctx} className={lead} />
+                    {proof.length > 0 && (
+                      <dl className="mt-8 grid grid-cols-2 gap-3">
+                        {proof.map((s) => (
+                          <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end gap-1 rounded-2xl border bg-card p-4">
+                            <dt className="text-small text-muted-foreground">{s.label}</dt>
+                            <dd className="text-h3 font-semibold tabular-nums">
+                              <Value text={s.value} />
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </div>
+                </Reveal>
+              </div>
+            </section>
+          );
+        })}
+      </MotionProvider>
 
       {/* Everything after the scroll story sits on an opaque surface over the fixed canvas. */}
-      <div className="relative border-t bg-background">
+      <ScrollReveal className="relative border-t bg-background">
         {who && (
           <section aria-labelledby="who-title" className="container-page section-y">
-            <h2 id="who-title" className="text-h2">{who.title}</h2>
+            <h2 id="who-title" data-rise className="text-h2">{who.title}</h2>
             <p className="mt-4 max-w-prose text-body-lg text-muted-foreground">{who.body.split("\n")[0]}</p>
             <ul className="mt-8 flex flex-wrap gap-3">
               {industries.map((page) => (
-                <li key={page.slug}>
+                <li key={page.slug} data-rise>
                   <Link
                     href={page.slug}
                     className="inline-flex min-h-11 items-center gap-2 rounded-full border bg-card px-5 text-small font-medium transition-colors hover:border-primary/50 hover:text-primary-ink"
@@ -149,12 +148,11 @@ export default async function HomePage({ params }: Params) {
         {why && (
           <section aria-labelledby="why-title" className="border-y bg-card">
             <div className="container-page section-y">
-              <h2 id="why-title" className="max-w-2xl text-h2">{why.title}</h2>
-              <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <h2 id="why-title" data-rise className="max-w-2xl text-h2">{why.title}</h2>
+              <ul className="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
                 {whyPoints.map(([, title, text]) => (
-                  <li key={title} className="rounded-2xl border bg-background p-6">
-                    <Check aria-hidden className="size-6 text-primary-ink" />
-                    <p className="mt-4 text-h4">{title}</p>
+                  <li key={title} data-rise className="border-t border-foreground/20 pt-5">
+                    <p className="text-h4">{title}</p>
                     <p className="mt-2 text-small text-muted-foreground">{text}</p>
                   </li>
                 ))}
@@ -166,16 +164,20 @@ export default async function HomePage({ params }: Params) {
 
         <div className="container-page grid gap-4 section-y md:grid-cols-2">
           {procurement && (
-            <div className="flex flex-col rounded-2xl border bg-card p-6 elevation-1 md:p-8">
-              <FileCheck2 aria-hidden className="size-6 text-primary-ink" />
-              <h2 className="mt-4 text-h3">{procurement.title}</h2>
+            <div data-rise className="flex flex-col rounded-2xl border bg-card p-6 elevation-1 md:p-8">
+              <h2 className="flex items-center gap-3 text-h3">
+                <FileCheck2 aria-hidden className="size-6 shrink-0 text-primary-ink" />
+                {procurement.title}
+              </h2>
               <Markdown source={procurement.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
             </div>
           )}
           {attack && (
-            <div className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8">
-              <ShieldAlert aria-hidden className="size-6 text-primary-ink" />
-              <h2 className="mt-4 text-h3">{attack.title}</h2>
+            <div data-rise className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8">
+              <h2 className="flex items-center gap-3 text-h3">
+                <ShieldAlert aria-hidden className="size-6 shrink-0 text-primary-ink" />
+                {attack.title}
+              </h2>
               <Markdown source={attack.body} ctx={ctx} className="text-muted-foreground [&_a]:text-foreground" />
             </div>
           )}
@@ -183,8 +185,8 @@ export default async function HomePage({ params }: Params) {
 
         {facts.length > 0 && (
           <section aria-labelledby="facts-title" className="container-page pb-16 md:pb-24">
-            <div className="rounded-2xl border p-6 md:p-8">
-              <h2 id="facts-title" className="eyebrow text-muted-foreground">{t("home.atAGlance")}</h2>
+            <div data-rise className="rounded-2xl border p-6 md:p-8">
+              <h2 id="facts-title" className="eyebrow font-sans text-muted-foreground">{t("home.atAGlance")}</h2>
               <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
                 {facts.filter((f) => showClaim(f.value)).map((f) => (
                   <div key={f.label}>
@@ -195,14 +197,13 @@ export default async function HomePage({ params }: Params) {
                   </div>
                 ))}
               </dl>
-              <Link href="/about" className="mt-8 inline-flex min-h-11 items-center gap-2 text-small font-semibold text-primary-ink">
+              <Link href="/about" className="mt-8 inline-flex min-h-11 items-center text-small font-semibold text-primary-ink underline decoration-primary/40 underline-offset-4 hover:decoration-primary">
                 {t("nav.about")}
-                <ArrowRight aria-hidden className="size-4 rtl:-scale-x-100" />
               </Link>
             </div>
           </section>
         )}
-      </div>
+      </ScrollReveal>
     </main>
   );
 }

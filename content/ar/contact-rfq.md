@@ -23,7 +23,7 @@ secondaryKeywords: ["طلب عرض سعر تيار خفيف في قطر", "مع�
 - **البريد الإلكتروني:** ⁦contact@fuertetechnologies.com⁩
 - **ساعات العمل:** [CONFIRM: e.g. Sunday to Thursday, 8:00 to 17:00]
 - **الخريطة:** [PLACEHOLDER: map pin; load the map only after consent, or use a static image]
-- **تتعرضون لهجوم؟** [الاستجابة الطارئة للحوادث السيبرانية ←](/emergency-cyber-response)
+- **تتعرضون لهجوم؟** [الاستجابة الطارئة للحوادث السيبرانية](/emergency-cyber-response)
 
 ---
 

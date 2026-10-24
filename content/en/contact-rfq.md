@@ -23,7 +23,7 @@ Book a free site survey or request a quote. It takes about 2 minutes. An enginee
 - **Email:** contact@fuertetechnologies.com
 - **Office hours:** [CONFIRM: e.g. Sunday to Thursday, 8:00 to 17:00]
 - **Map:** [PLACEHOLDER: map pin; load the map only after consent, or use a static image]
-- **Under attack?** [Emergency cyber response →](/emergency-cyber-response)
+- **Under attack?** [Emergency cyber response](/emergency-cyber-response)
 
 ---
 

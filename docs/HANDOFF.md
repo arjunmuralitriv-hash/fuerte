@@ -44,16 +44,11 @@ Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
    - **Still open:**
      - **Beat-card reveal timing:** the beat cards appear immediately because the film player signals "scene ready" on its first frame. Bring each card in when the film arrives at its beat, or when that beat's loop starts.
      - **Hero background edge:** the hero section's dark background ends in a hard horizontal edge over the film. Fade it out instead.
-     - **Download weight: A/B test scroll-scrubbed video (no re-render).**
-       - **Problem:** a 528-frame AVIF cut is about 45–50 MB on desktop and 35–40 MB on phone. Visitors download only their own cut, progressively, and it is cached.
-       - **Test:** encode the same frames as one MP4 (H.264) and one WebM (AV1/VP9) per cut, with a short keyframe interval (e.g. every 4–8 frames). Add a player mode in `scroll-film.tsx` that sets `video.currentTime` from the scroll position instead of drawing AVIF frames to the canvas.
-       - **Source frames:**
-         - The lossless PNG masters live only on the user's laptop (`blender/build/full/`, git-ignored).
-         - Encode from the committed AVIFs only for a size and feel test.
-         - Ask the user to run the final encode locally, or to push the masters somewhere.
-       - **Compare:**
-         - size per cut
-         - seek smoothness in Chrome, Edge, Firefox and Safari, especially iOS Safari, which is known to stutter on seeks
+     - **Scroll-scrubbed video: built, needs a check on a real iPhone.**
+       - Each cut is one H.264 video in `public/film-video/<theme>-<format>.mp4` (14–18 MB, against 35–50 MB of AVIF frames), made by `scripts/encode_film_video.py`. Re-run it whenever the frames change.
+       - The player downloads the visitor's cut whole, shows the beat stills meanwhile, then scrubs the video. With no H.264 support, or if the video fails, it falls back to the frames. `?film=frames` forces the frames, for side-by-side comparison.
+       - The committed videos are encoded from the AVIFs. For the final cut, encode from the lossless masters on the laptop: `python3 scripts/encode_film_video.py dark/portrait --src blender/build/full/...`.
+       - **Still to check on an iPhone:** smoothness against `?film=frames`, and that the film shows in Low Power Mode.
          - CPU use
          - how the idle-loop hand-off at each beat looks
        - **Decision:** keep video only if it is clearly smaller and scrubs as smoothly as the AVIF sequence on iOS. Otherwise keep AVIF.
@@ -68,7 +63,7 @@ Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
    - B3: Turnstile must fail closed in production.
 5. **B2:** RFQ uploads are capped at 25 MB, but Vercel rejects request bodies over 4.5 MB. Upload straight to storage and email a link. **Ask the user:** Vercel Blob, a GCC-region bucket, or Cloudflare R2 (see the Cloudflare section). These files are personal data under the PDPPL, so prefer a GCC-region store for them even if the film media goes to R2.
 6. **B4:** durable lead storage in a GCC region, stored first and then synced to email and CRM, plus the 24-month retention job. **Decided 2026-10-20:** Supabase in Mumbai (`ap-south-1`); Supabase has no Gulf region.
-7. **B5:**
+7. **B5:** The WhatsApp sales alert was dropped on 2026-10-21: email only for now.
    - UTM/source capture
    - lead scoring and routing
    - auto-reply in the chosen language
@@ -78,12 +73,12 @@ Details for each row are in `docs/plan.md` → "Status at 2026-10-20".
    - the NIA basics guide (EN + AR, via the `fuerte-arabic` skill)
    - a real gated Vendor Pack form and Careers form
    - a 404 scene, using a film still
-9. **B8:** Plausible, cookieless.
+9. **B8:** Cloudflare Web Analytics, cookieless (decided 2026-10-21 instead of Plausible).
 10. **B10:**
    - Remove the dead real-time 3D code: `components/three/**`, `components/sections/home-scene.tsx`, `app/[locale]/dev/scene`.
    - Remove its packages: three, @react-three/*, postprocessing, detect-gpu.
    - Use the orb loader in Sonner.
-11. **B11:** a nonce-based CSP (the production CSP currently allows `'unsafe-inline'` scripts).
+11. **B11:** decided 2026-10-21 to keep `'unsafe-inline'`: a hash-based CSP is impossible here (34–55 per-page inline Next.js scripts; SRI doesn't run with Turbopack), and nonces would make every page dynamic.
 
 Items in plan section C (client facts) and D (accounts, counsel, domains) are not code; leave them to the user.
 

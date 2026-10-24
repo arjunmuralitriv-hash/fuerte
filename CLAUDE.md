@@ -13,6 +13,7 @@ Approved plan: `docs/plan.md` (its "Status" section is the current to-do list). 
 - Typography and spacing follow plan section 12. Use tokens only, no arbitrary px values. Arabic is never letter-spaced or uppercased.
 - Use logical properties only (`ps-`/`pe-`/`ms-`/`me-`/`start`/`end`) so RTL mirrors automatically.
 - Red text and icons use `text-primary-ink` (AA in both themes); `primary` is for fills such as buttons.
+- Animation uses anime.js; interface motion uses Motion (`motion/react`). Tokens in `lib/motion.ts`, rules in MASTER.md → "Motion". No GSAP or Lenis.
 - Loading states use `components/ui/loader.tsx` (Thinking Orbs). One orb state = one meaning (plan section 11).
 - Never claim certifications or licences (ISO, ICV, MoI SSD, QCDD) unless confirmed. Never name competitors.
 - Legal/compliance rules in plan section 5 (PDPPL consent, E-Commerce Law Art. 51 disclosure, Arabic Language Law).

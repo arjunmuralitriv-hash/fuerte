@@ -1,16 +1,20 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
+import { animate } from "motion/mini";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { startTransition, useEffect, useRef, useState } from "react";
 
 import { DateField } from "@/components/forms/date-field";
 import { CheckLine, ChoiceCard, controlClass, Field } from "@/components/forms/fields";
+import { SOURCE_KEY } from "@/components/layout/source-capture";
 import { ErrorSummary, FailedNotice, SubmitButton, Turnstile, useFormAction } from "@/components/forms/form-shell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { prepareUploads, submitRfq } from "@/lib/forms/actions";
+import { uploadFiles } from "@/components/forms/upload";
+import { submitRfq } from "@/lib/forms/actions";
+import { DURATION, EASE_ENTRANCE, prefersReducedMotion, seconds } from "@/lib/motion";
 import { whatsappHref } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +47,7 @@ export function RfqForm() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const preset = params.get("service") ?? "";
   const [step, setStep] = useState(0);
+  const shown = useRef(0); // the step on screen before the current one, for the slide direction
   const [mode, setMode] = useState(params.get("type") === "quote" ? "quote" : "survey");
   const [services, setServices] = useState<Set<string>>(() => new Set([ALIASES[preset] ?? preset].filter((s) => Object.values(GROUPS).flat().includes(s as never))));
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
@@ -60,9 +65,18 @@ export function RfqForm() {
     setStep(first);
   }, [state]);
 
-  // Move focus to the step heading whenever the step changes (not on first render).
+  // Move focus to the step heading whenever the step changes (not on first render), and slide the new step in from
+  // the side the visitor is heading: forward from the inline end, back from the inline start (mirrored in RTL).
   useEffect(() => {
-    if (moved.current) headingRef.current?.focus();
+    const section = headingRef.current?.closest("section");
+    if (moved.current && section) {
+      headingRef.current?.focus();
+      if (!prefersReducedMotion()) {
+        const side = (step > shown.current ? 1 : -1) * (getComputedStyle(section).direction === "rtl" ? -1 : 1);
+        animate(section, { opacity: [0, 1], transform: [`translateX(${24 * side}px)`, "none"] }, { duration: seconds(DURATION.slow), ease: EASE_ENTRANCE });
+      }
+    }
+    shown.current = step;
     moved.current = true;
   }, [step]);
 
@@ -97,34 +111,21 @@ export function RfqForm() {
     const data = new FormData(form);
     const files = data.getAll("files").filter((x): x is File => x instanceof File && x.size > 0);
     data.delete("files");
+    try {
+      data.set("source", sessionStorage.getItem(SOURCE_KEY) ?? "");
+    } catch {}
     setUploadFailed(false);
     if (files.length) {
       setUploading(true);
-      try {
-        const plan = await prepareUploads(locale, files.map((x) => ({ name: x.name, size: x.size })));
-        if (plan.status === "invalid") {
-          setClientErrors({ files: plan.error });
-          setStep(2);
-          return;
-        }
-        if (plan.status === "failed") throw new Error("upload refused");
-        if (plan.status === "ready") {
-          await Promise.all(
-            plan.targets.map((target, i) =>
-              fetch(target.url, { method: "PUT", headers: { "Content-Type": files[i].type || "application/octet-stream", "x-upsert": "false" }, body: files[i] }).then((r) => {
-                if (!r.ok) throw new Error(`upload ${r.status}`);
-              }),
-            ),
-          );
-        }
-        data.set("uploads", JSON.stringify(files.map((x, i) => ({ name: x.name, path: plan.status === "ready" ? plan.targets[i].path : undefined }))));
-      } catch (error) {
-        console.error("[rfq] upload failed", error);
-        setUploadFailed(true);
+      const result = await uploadFiles(locale, files, "rfq");
+      setUploading(false);
+      if (result.status === "invalid") {
+        setClientErrors({ files: result.error });
+        setStep(2);
         return;
-      } finally {
-        setUploading(false);
       }
+      if (result.status === "failed") return setUploadFailed(true);
+      data.set("uploads", result.uploads);
     }
     startTransition(() => formAction(data));
   }

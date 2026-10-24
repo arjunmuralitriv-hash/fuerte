@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import type { Locale } from "@/i18n/routing";
-import { confirmedPlain, getAllSlugs, getFaqs, getPage, getPillarServices, hasPlaceholder, PILLARS, type Page } from "@/lib/content";
+import { confirmedPlain, getListedSlugs, getFaqs, getPage, getPillarServices, hasPlaceholder, PILLARS, type Page } from "@/lib/content";
 import { getHome } from "@/lib/content/home";
 import { absoluteUrl, localePath } from "@/lib/seo";
 import { SITE, whatsappHref } from "@/lib/site";
@@ -30,7 +30,7 @@ export async function knowledge(locale: Locale) {
   const common = await getTranslations({ locale, namespace: "common" });
   const meta = await getTranslations({ locale, namespace: "metadata" });
   const home = getHome(locale);
-  const pages = getAllSlugs().map((slug) => getPage(locale, slug)!);
+  const pages = getListedSlugs().map((slug) => getPage(locale, slug)!);
   const industries = pages.filter((p) => p.section === "industries");
   // Pillars, sub-services and industries carry their own FAQs; the services index is not an entry.
   const listed = new Set(pages.filter((p) => (p.section === "services" && p.slug !== "/services") || p.section === "industries").map((p) => p.slug));

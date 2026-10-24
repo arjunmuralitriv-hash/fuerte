@@ -1,9 +1,8 @@
-import { ArrowRight, MessageCircle, Plus } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { FormBlock } from "@/components/content/form-block";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { headingId } from "@/lib/content";
@@ -76,7 +75,6 @@ export async function Markdown({ source, ctx, className }: { source: string; ctx
         {spec.primary && (
           <Link href={{ pathname: "/contact", query: { type: "survey", service: key } }} className={buttonVariants({ size: "xl" })}>
             {label(spec.primary)}
-            <ArrowRight data-icon="inline-end" aria-hidden className="rtl:-scale-x-100" />
           </Link>
         )}
         {spec.secondary && (
@@ -149,7 +147,7 @@ export async function Markdown({ source, ctx, className }: { source: string; ctx
     code: ({ className: cls, children }) => {
       const value = textOf(children).trim();
       if (cls?.includes("language-fuerte-cta")) return <CtaGroup spec={JSON.parse(value) as CtaSpec} />;
-      if (cls?.includes("language-fuerte-form")) return ctx.form ?? <FormBlock kind={value} />;
+      if (cls?.includes("language-fuerte-form")) return ctx.form ?? null;
       if (value.startsWith("⟦") && value.endsWith("⟧")) return <Placeholder>{value.slice(1, -1)}</Placeholder>;
       return <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-[0.9em]">{children}</code>;
     },

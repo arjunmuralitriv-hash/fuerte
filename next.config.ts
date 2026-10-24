@@ -8,6 +8,8 @@ const LINKEDIN = "https://snap.licdn.com https://px.ads.linkedin.com";
 // Sentry's ingest host, only when a DSN is configured (instrumentation.ts). Speed Insights reports to /_vercel (self).
 const SENTRY_DSN = process.env.SENTRY_DSN ?? "";
 const SENTRY = SENTRY_DSN ? new URL(SENTRY_DSN).origin : "";
+// Cloudflare Web Analytics (cookieless, no consent needed; plan row B8): the beacon script and its report endpoint.
+const CF_ANALYTICS = process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN ? { script: "https://static.cloudflareinsights.com", report: "https://cloudflareinsights.com" } : null;
 // RFQ files upload straight from the browser to Supabase Storage (lib/forms/uploads.ts).
 const SUPABASE = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).origin : "";
 
@@ -15,11 +17,13 @@ const SUPABASE = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).or
 // everything else is an explicit allow-list. Dev mode is left without a CSP (it needs eval).
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}`,
+  `script-src 'self' 'unsafe-inline' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${CF_ANALYTICS ? ` ${CF_ANALYTICS.script}` : ""}`,
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${ANALYTICS} ${LINKEDIN}`,
   "font-src 'self'",
-  `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${SENTRY ? ` ${SENTRY}` : ""}${SUPABASE ? ` ${SUPABASE}` : ""}`,
+  // The film video is downloaded whole and played from memory (components/sections/scroll-film.tsx).
+  "media-src 'self' blob:",
+  `connect-src 'self' ${TURNSTILE} ${ANALYTICS} ${LINKEDIN}${SENTRY ? ` ${SENTRY}` : ""}${CF_ANALYTICS ? ` ${CF_ANALYTICS.report}` : ""}${SUPABASE ? ` ${SUPABASE}` : ""}`,
   `frame-src ${TURNSTILE}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -62,6 +66,7 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // Film frames (lib/film.ts) only change when the film is re-rendered: cache for a week, refresh in the background.
       { source: "/film/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
+      { source: "/film-video/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
     ];
   },
 };

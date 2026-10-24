@@ -24,13 +24,13 @@ Checked against the repo (`fuerte-web`, branch `english-pages`, 25 commits; `mai
 | 2 | RFQ upload | The 25 MB cap is far over Vercel's 4.5 MB request limit, and files travel as base64 email attachments | Upload straight to storage (Vercel Blob or a GCC bucket) and email a link |
 | 3 | Turnstile | Lets submissions through when the secret is unset, even in production | Reject submissions in production when the key is missing |
 | 4 | Lead storage | No database; a lead sent only via webhook is lost silently if the webhook fails | Supabase in Mumbai (`ap-south-1`; Supabase has no Gulf region, decided 2026-10-20); store each lead first, then sync it. Retention job for the 24-month delete |
-| 5 | Lead handling | No UTM/source capture, no scoring or routing; the auto-reply ignores the preferred language; the only alert is by email | Add UTM capture, score and route, send the reply in the chosen language, add a WhatsApp alert |
+| 5 | Lead handling | No UTM/source capture, no scoring or routing; the auto-reply ignores the preferred language; the only alert is by email | Add UTM capture, score and route, send the reply in the chosen language, add a WhatsApp alert **Decided 2026-10-21:** email alert only for now (no WhatsApp/Telegram). |
 | 6 | Missing pages | Projects/case studies, Clients & Partners, the NIA basics guide; the 404 has no scene; the Vendor Pack and Careers forms are WhatsApp stand-ins | Build the routes (they stay empty until client content arrives), the gated Vendor Pack form, the Careers form, and a 404 scene (a film still or loop) |
 | 7 | SEO | No OG images; JSON-LD lacks WebSite, LocalBusiness, OfferCatalog, HowTo (MoI guide), Person, speakable; Article has no author or date; no `/api/knowledge`, no IndexNow; llms.txt is EN only | Add `opengraph-image` per locale and template, the missing schema types, the knowledge JSON, an IndexNow ping, and AR llms |
-| 8 | Analytics | Plausible (the plan's cookieless default) isn't wired in | Add the Plausible script (no consent needed) |
+| 8 | Analytics | Plausible (the plan's cookieless default) isn't wired in | Add the Plausible script (no consent needed) **Decided 2026-10-21:** Cloudflare Web Analytics instead of Plausible (free, cookieless). |
 | 9 | Quality gates | CodeQL matrix is empty; no lint/typecheck/build CI; no `typecheck` script; no arbitrary-px lint rule; no tests, visual-regression or axe runs; no Sentry or Speed Insights | GitHub Actions CI; fix CodeQL; Playwright screenshots at 375/768/1440 × EN/AR × light/dark plus axe; Sentry + Speed Insights |
 | 10 | Clean-up | `components/three/**` and `home-scene.tsx` are dead in production but `three`, r3f, postprocessing and detect-gpu are still dependencies; Sonner uses a spinner instead of an orb; no orb preloader on the home page | Remove the dead 3D code and dependencies (keep the Blender pipeline); use the orb in Sonner |
-| 11 | CSP | Production CSP allows `'unsafe-inline'` scripts | Nonce-based CSP to reach the plan's A+ |
+| 11 | CSP | Production CSP allows `'unsafe-inline'` scripts | Nonce-based CSP to reach the plan's A+ **Decided 2026-10-21:** keep `'unsafe-inline'`. A hash CSP is impossible (34–55 per-page inline Next.js scripts; SRI does not run with Turbopack) and nonces would make every page dynamic. Revisit only if a tender demands an A+ header grade. |
 
 ### C. Blocked on the client (266 markers across EN and AR)
 - **Company facts:** legal name (EN + official Arabic), CR number, legal form, trade licence, MoI SSD and Civil Defence licence status, year founded, staff and engineer counts, projects delivered.
@@ -190,7 +190,7 @@ Rule I applied: a service is included only if it falls inside a pillar Fuerte's 
   - `three`, `@react-three/fiber`, `drei`, `postprocessing`
   - models built in Blender and exported as glTF with Draco/Meshopt and KTX2 compression (`gltf-transform`)
   - `detect-gpu` decides when to show the fallback
-- **Motion:** GSAP ScrollTrigger + Lenis for the scroll story; Framer Motion for UI.
+- **Motion:** anime.js (`animejs`) for authored animation (timelines, staggers, SVG, text, scroll-linked scenes); Motion (`motion/react`, motion.dev) for interface motion control. Rules in `design-system/fuerte/MASTER.md` → "Motion"; tokens in `lib/motion.ts`. (Changed 2026-10-24 from GSAP + Lenis + Framer Motion.)
 - **Languages:** next-intl with `/en` and `/ar`, `dir="rtl"`, logical CSS properties.
 - **Fonts:** the IBM Plex family (EN, AR, Mono), self-hosted. Full spec in section 12.
 - **Forms and leads:**
@@ -410,7 +410,7 @@ fuerte-web/
   - `type="tel"` with a +974 prefix, plus `inputmode` and `autocomplete` attributes
   - inline validation
   - the keyboard never covers the active field
-- Native scroll on touch devices (Lenis `syncTouch: false`), so scrolling never feels sluggish.
+- Native scroll everywhere (no smooth-scroll library), so scrolling never feels sluggish.
 
 **3D on mobile**
 - A separate profile:
