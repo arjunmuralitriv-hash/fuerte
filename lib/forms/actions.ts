@@ -36,6 +36,8 @@ export type UploadPlan = { status: "ready"; targets: UploadTarget[] } | { status
 /** Step one of a form with files: upload links for the browser (lib/forms/uploads.ts). Locally, without storage, files are only named. */
 export async function prepareUploads(locale: string, files: { name: string; size: number }[], kind: UploadKind = "rfq"): Promise<UploadPlan> {
   const { t } = await setup(new FormData(), locale);
+  // `kind` arrives from the browser: only a known upload kind gets through.
+  if (!Object.hasOwn(UPLOAD_KINDS, kind)) return { status: "failed" };
   const { types, max } = UPLOAD_KINDS[kind];
   if (files.length > (kind === "careers" ? 1 : MAX_FILES)) return { status: "failed" };
   if (files.some((f) => f.size > max)) return { status: "invalid", error: t(kind === "careers" ? "cvSize" : "fileSize") };
@@ -44,7 +46,7 @@ export async function prepareUploads(locale: string, files: { name: string; size
   try {
     return { status: "ready", targets: await uploadTargets(files.map((f) => f.name)) };
   } catch (error) {
-    console.error(`[${kind}] upload links failed`, error);
+    console.error("[%s] upload links failed", kind, error); // values as arguments, never in the format string
     return { status: "failed" };
   }
 }
@@ -76,7 +78,7 @@ function parseSource(raw: string) {
 async function fileUploads(reference: string, uploads: { path?: string; name: string }[], kind: UploadKind): Promise<LeadFile[] | "invalid" | "failed"> {
   if (!uploadsConfigured() || !uploads.length) return uploads.map((u) => ({ name: u.name }));
   const stored = await promoteUploads(reference, uploads.map((u) => ({ path: u.path ?? "", name: u.name })), kind).catch((error) => {
-    console.error(`[${kind}] upload check failed`, reference, error);
+    console.error("[%s] upload check failed", kind, reference, error);
     return undefined;
   });
   return stored === null ? "invalid" : (stored ?? "failed");

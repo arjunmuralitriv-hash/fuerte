@@ -55,9 +55,22 @@ function sectionOf(slug: string): Section {
   return first === "services" || first === "industries" || first === "insights" || first === "legal" ? first : "page";
 }
 
+/**
+ * Removes HTML comments (notes for the team). Repeats until none is left, so pieces of a comment cannot join into a new
+ * one, then drops any unclosed opener (CodeQL js/incomplete-multi-character-sanitization).
+ */
+function stripComments(markdown: string) {
+  let text = markdown;
+  for (let prev = ""; prev !== text; ) {
+    prev = text;
+    text = text.replace(/<!--[\s\S]*?-->/g, "");
+  }
+  return text.replace(/<!--/g, "").trim();
+}
+
 /** Splits a draft into H1, lead paragraph and body. Comments are notes for the team, never rendered. */
 function splitDoc(markdown: string) {
-  const text = markdown.replace(/<!--[\s\S]*?-->/g, "").trim();
+  const text = stripComments(markdown);
   const lines = text.split("\n");
   const h1At = lines.findIndex((l) => l.startsWith("# "));
   const h1 = h1At >= 0 ? lines[h1At].slice(2).trim() : "";
@@ -109,7 +122,7 @@ export function getSource(locale: Locale, slug: string) {
   const own = load(locale).get(slug);
   const raw = own ?? load(routing.defaultLocale).get(slug);
   if (!raw) return undefined;
-  return { fm: raw.fm, contentLocale: own ? locale : routing.defaultLocale, text: raw.content.replace(/<!--[\s\S]*?-->/g, "").trim() };
+  return { fm: raw.fm, contentLocale: own ? locale : routing.defaultLocale, text: stripComments(raw.content) };
 }
 
 /** Every canonical slug (English is the master list). */

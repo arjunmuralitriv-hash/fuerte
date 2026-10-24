@@ -23,7 +23,7 @@ export async function uploadFiles(locale: string, files: File[], kind: UploadKin
     }
     return { status: "ok", uploads: JSON.stringify(files.map((x, i) => ({ name: x.name, path: plan.status === "ready" ? plan.targets[i].path : undefined }))) };
   } catch (error) {
-    console.error(`[${kind}] upload failed`, error);
+    console.error("[%s] upload failed", kind, error);
     return { status: "failed" };
   }
 }
