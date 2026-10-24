@@ -14,8 +14,9 @@ import type { FilmFormat, FilmManifest } from "@/components/sections/scroll-film
  * still holds the v1 render (every 3rd frame plus the beats: 180), so each cut is detected by its last v2 frame. Called
  * per render: in dev each finished cut switches over on the next page load.
  */
-const V1 = { count: 180, beats: [0, 47, 73, 100, 127, 156, 179], version: undefined };
-const V2 = { count: 528, beats: [0, 139, 214, 294, 374, 459, 527], version: "2" };
+const V1 = { count: 180, beats: [0, 47, 73, 100, 127, 156, 179], version: undefined, skip: undefined };
+// Frame 187 is a one-frame white flash at the cut from the tower to the data centre, in every cut: the player skips it.
+const V2 = { count: 528, beats: [0, 139, 214, 294, 374, 459, 527], version: "2", skip: [187] };
 const REST_FRAMES = [95, 195, 274, 339, 397, 491]; // film frames 96, 196, 275, 340, 398, 492 (build_film.py MIDS)
 
 const cut = (theme: "light" | "dark", format: "landscape" | "landscape-rtl" | "portrait"): FilmFormat => {
