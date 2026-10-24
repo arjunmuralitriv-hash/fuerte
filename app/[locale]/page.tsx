@@ -7,6 +7,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Markdown, Placeholder } from "@/components/content/markdown";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { Reveal } from "@/components/sections/reveal";
 import { ScrollFilm } from "@/components/sections/scroll-film";
 import { Link } from "@/i18n/navigation";
@@ -63,6 +64,7 @@ export default async function HomePage({ params }: Params) {
     <main id="main" lang={home.contentLocale} dir={home.contentLocale === "ar" ? "rtl" : "ltr"}>
       {/* The pre-rendered film is fixed behind the beat sections and scrubs to their data-beat positions (lib/film.ts). */}
       <ScrollFilm manifest={homeFilm()} />
+      <SmoothScroll />
 
       {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero fades in from first paint, never later (a late fade-in would become the LCP). */}
       <section data-beat="0" aria-labelledby="hero-title" className="relative isolate">

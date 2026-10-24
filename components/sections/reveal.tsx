@@ -5,16 +5,17 @@ import { useEffect, useRef, useState } from "react";
 
 import { DURATION, seconds } from "@/lib/motion";
 
-/** The film fires this (detail: N) and sets <html data-film-beat="N"> when it lands on beat N (scroll-film.tsx). */
+/** The film fires this (detail: N) and sets <html data-film-beat="N"> once beat N's idle loop is on screen, or when it
+ * lands on beat N if the cut has no loops (scroll-film.tsx). */
 const BEAT_EVENT = "fuerte:film-beat";
-/** A beat card in view shows after this even if the film never lands on its beat (resting between beats, no film). */
-const BEAT_MAX_WAIT = 2500;
+/** A beat card in view shows after this even without the film's signal (resting between beats, a loop that never loads). */
+const BEAT_MAX_WAIT = 4000;
 
 /**
  * Lets the film play before a beat's copy appears, then fades the copy in (home page). The hero copy does not wait:
  * it fades in with CSS from first paint, so it never becomes a late LCP (app/[locale]/page.tsx).
- * - beat N: shows when the film lands on beat N, so the camera move arrives first; or BEAT_MAX_WAIT after the card is
- *   half in view, at most.
+ * - beat N: shows once the film signals beat N (its idle loop is playing, so the visitor sees the scene alive first);
+ *   or BEAT_MAX_WAIT after the card is half in view, at most. Once shown, a card stays: scrolling back just brings it.
  * - otherwise: shows a beat after the card is half in view.
  * Motion drives it (MASTER.md → Motion): the copy is visible in the server HTML, is hidden instantly at mount (off
  * screen) and rises in when shown. Keyboard focus shows it at once; reduced motion drops the rise and keeps the fade.
