@@ -190,7 +190,7 @@ Rule I applied: a service is included only if it falls inside a pillar Fuerte's 
   - `three`, `@react-three/fiber`, `drei`, `postprocessing`
   - models built in Blender and exported as glTF with Draco/Meshopt and KTX2 compression (`gltf-transform`)
   - `detect-gpu` decides when to show the fallback
-- **Motion:** GSAP ScrollTrigger + Lenis for the scroll story; Framer Motion for UI.
+- **Motion:** anime.js (`animejs`) for authored animation (timelines, staggers, SVG, text, scroll-linked scenes); Motion (`motion/react`, motion.dev) for interface motion control. Rules in `design-system/fuerte/MASTER.md` → "Motion"; tokens in `lib/motion.ts`. (Changed 2026-10-24 from GSAP + Lenis + Framer Motion.)
 - **Languages:** next-intl with `/en` and `/ar`, `dir="rtl"`, logical CSS properties.
 - **Fonts:** the IBM Plex family (EN, AR, Mono), self-hosted. Full spec in section 12.
 - **Forms and leads:**
@@ -410,7 +410,7 @@ fuerte-web/
   - `type="tel"` with a +974 prefix, plus `inputmode` and `autocomplete` attributes
   - inline validation
   - the keyboard never covers the active field
-- Native scroll on touch devices (Lenis `syncTouch: false`), so scrolling never feels sluggish.
+- Native scroll everywhere (no smooth-scroll library), so scrolling never feels sluggish.
 
 **3D on mobile**
 - A separate profile:
