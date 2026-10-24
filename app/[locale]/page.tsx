@@ -5,6 +5,8 @@ import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { Markdown, Placeholder } from "@/components/content/markdown";
+import { MotionProvider } from "@/components/motion/motion-provider";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { Reveal } from "@/components/sections/reveal";
 import { ScrollFilm } from "@/components/sections/scroll-film";
 import { Link } from "@/i18n/navigation";
@@ -88,47 +90,49 @@ export default async function HomePage({ params }: Params) {
       </section>
 
       {/* Beats 1–6: one viewport each, so each layer of the tower is centred while its copy is read. Copy sits on a translucent card for contrast over the scene. */}
-      {beats.map((beat, i) => {
-        const n = i + 1;
-        const proof = n === 5 ? stats.filter((s) => showClaim(s.value)) : [];
-        return (
-          <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
-            {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
-            <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
-              <Reveal beat={n} className="w-full max-w-xl">
-                <div className="rounded-3xl border bg-background/80 p-5 backdrop-blur-md md:p-8 dark:bg-background/70">
-                  <h2 id={`beat-${n}-title`} className="text-h2">
-                    {beat.title}
-                  </h2>
-                  <Markdown source={beat.body} ctx={ctx} className={lead} />
-                  {proof.length > 0 && (
-                    <dl className="mt-8 grid grid-cols-2 gap-3">
-                      {proof.map((s) => (
-                        <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end gap-1 rounded-2xl border bg-card p-4">
-                          <dt className="text-small text-muted-foreground">{s.label}</dt>
-                          <dd className="text-h3 font-semibold tabular-nums">
-                            <Value text={s.value} />
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
-                </div>
-              </Reveal>
-            </div>
-          </section>
-        );
-      })}
+      <MotionProvider>
+        {beats.map((beat, i) => {
+          const n = i + 1;
+          const proof = n === 5 ? stats.filter((s) => showClaim(s.value)) : [];
+          return (
+            <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
+              {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
+              <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
+                <Reveal beat={n} className="w-full max-w-xl">
+                  <div className="rounded-3xl border bg-background/80 p-5 backdrop-blur-md md:p-8 dark:bg-background/70">
+                    <h2 id={`beat-${n}-title`} className="text-h2">
+                      {beat.title}
+                    </h2>
+                    <Markdown source={beat.body} ctx={ctx} className={lead} />
+                    {proof.length > 0 && (
+                      <dl className="mt-8 grid grid-cols-2 gap-3">
+                        {proof.map((s) => (
+                          <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end gap-1 rounded-2xl border bg-card p-4">
+                            <dt className="text-small text-muted-foreground">{s.label}</dt>
+                            <dd className="text-h3 font-semibold tabular-nums">
+                              <Value text={s.value} />
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </div>
+                </Reveal>
+              </div>
+            </section>
+          );
+        })}
+      </MotionProvider>
 
       {/* Everything after the scroll story sits on an opaque surface over the fixed canvas. */}
-      <div className="relative border-t bg-background">
+      <ScrollReveal className="relative border-t bg-background">
         {who && (
           <section aria-labelledby="who-title" className="container-page section-y">
-            <h2 id="who-title" className="text-h2">{who.title}</h2>
+            <h2 id="who-title" data-rise className="text-h2">{who.title}</h2>
             <p className="mt-4 max-w-prose text-body-lg text-muted-foreground">{who.body.split("\n")[0]}</p>
             <ul className="mt-8 flex flex-wrap gap-3">
               {industries.map((page) => (
-                <li key={page.slug}>
+                <li key={page.slug} data-rise>
                   <Link
                     href={page.slug}
                     className="inline-flex min-h-11 items-center gap-2 rounded-full border bg-card px-5 text-small font-medium transition-colors hover:border-primary/50 hover:text-primary-ink"
@@ -144,10 +148,10 @@ export default async function HomePage({ params }: Params) {
         {why && (
           <section aria-labelledby="why-title" className="border-y bg-card">
             <div className="container-page section-y">
-              <h2 id="why-title" className="max-w-2xl text-h2">{why.title}</h2>
+              <h2 id="why-title" data-rise className="max-w-2xl text-h2">{why.title}</h2>
               <ul className="mt-10 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
                 {whyPoints.map(([, title, text]) => (
-                  <li key={title} className="border-t border-foreground/20 pt-5">
+                  <li key={title} data-rise className="border-t border-foreground/20 pt-5">
                     <p className="text-h4">{title}</p>
                     <p className="mt-2 text-small text-muted-foreground">{text}</p>
                   </li>
@@ -160,7 +164,7 @@ export default async function HomePage({ params }: Params) {
 
         <div className="container-page grid gap-4 section-y md:grid-cols-2">
           {procurement && (
-            <div className="flex flex-col rounded-2xl border bg-card p-6 elevation-1 md:p-8">
+            <div data-rise className="flex flex-col rounded-2xl border bg-card p-6 elevation-1 md:p-8">
               <h2 className="flex items-center gap-3 text-h3">
                 <FileCheck2 aria-hidden className="size-6 shrink-0 text-primary-ink" />
                 {procurement.title}
@@ -169,7 +173,7 @@ export default async function HomePage({ params }: Params) {
             </div>
           )}
           {attack && (
-            <div className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8">
+            <div data-rise className="flex flex-col rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8">
               <h2 className="flex items-center gap-3 text-h3">
                 <ShieldAlert aria-hidden className="size-6 shrink-0 text-primary-ink" />
                 {attack.title}
@@ -181,7 +185,7 @@ export default async function HomePage({ params }: Params) {
 
         {facts.length > 0 && (
           <section aria-labelledby="facts-title" className="container-page pb-16 md:pb-24">
-            <div className="rounded-2xl border p-6 md:p-8">
+            <div data-rise className="rounded-2xl border p-6 md:p-8">
               <h2 id="facts-title" className="eyebrow font-sans text-muted-foreground">{t("home.atAGlance")}</h2>
               <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
                 {facts.filter((f) => showClaim(f.value)).map((f) => (
@@ -199,7 +203,7 @@ export default async function HomePage({ params }: Params) {
             </div>
           </section>
         )}
-      </div>
+      </ScrollReveal>
     </main>
   );
 }

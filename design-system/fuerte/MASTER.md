@@ -72,7 +72,8 @@ Tokens for all three live in `lib/motion.ts` (`DURATION`, `EASE_ENTRANCE`, `EASE
 
 Rules:
 - Both libraries load only in client components below the fold. The LCP headline never waits on either.
-- Motion: wrap in `LazyMotion features={domAnimation}` and use `m.*`, not `motion.*`, to keep the bundle small. Durations go through `seconds()`.
+- Motion: `m.*` components from `motion/react-m`, wrapped in `components/motion/motion-provider.tsx` around just the part that uses them (never the whole layout), so other pages pay nothing. One-off imperative moves (a step or screen sliding in) use `animate` from `motion/mini` with `transform` keyframes. Durations go through `seconds()`.
+- The shared pieces: `ScrollReveal` (`components/motion/scroll-reveal.tsx`, anime.js) is the one scroll reveal; mark blocks with `data-rise` or pass a `selector`.
 - anime.js: import only the functions used (`import { animate, stagger } from "animejs"`). Create animations inside `createScope({ root })` in a `useEffect`, and call `scope.revert()` on cleanup. Check `prefersReducedMotion()` first and jump to the end state.
 - Animate `transform` and `opacity` only. Exits run at about two thirds of the entrance. No bounce or overshoot on UI state.
 - Content is visible in the server HTML. Hide it only from script after mount, never with an SSR `initial={{ opacity: 0 }}`.

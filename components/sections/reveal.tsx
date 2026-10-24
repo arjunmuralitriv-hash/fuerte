@@ -1,6 +1,9 @@
 "use client";
 
+import * as m from "motion/react-m";
 import { useEffect, useRef, useState } from "react";
+
+import { DURATION, seconds } from "@/lib/motion";
 
 /** The film fires this (detail: N) and sets <html data-film-beat="N"> when it lands on beat N (scroll-film.tsx). */
 const BEAT_EVENT = "fuerte:film-beat";
@@ -13,7 +16,8 @@ const BEAT_MAX_WAIT = 2500;
  * - beat N: shows when the film lands on beat N, so the camera move arrives first; or BEAT_MAX_WAIT after the card is
  *   half in view, at most.
  * - otherwise: shows a beat after the card is half in view.
- * Reduced motion, no JavaScript and keyboard focus all show the copy at once (CSS in globals.css).
+ * Motion drives it (MASTER.md → Motion): the copy is visible in the server HTML, is hidden instantly at mount (off
+ * screen) and rises in when shown. Keyboard focus shows it at once; reduced motion drops the rise and keeps the fade.
  */
 export function Reveal({ beat, className, children }: { beat?: number; className?: string; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -57,8 +61,15 @@ export function Reveal({ beat, className, children }: { beat?: number; className
   }, [beat]);
 
   return (
-    <div ref={ref} data-reveal={state} className={className}>
+    <m.div
+      ref={ref}
+      initial={false}
+      animate={state === "pending" ? { opacity: 0, y: 24 } : { opacity: 1, y: 0 }}
+      transition={state === "pending" ? { duration: 0 } : { duration: seconds(DURATION.slower) }}
+      onFocusCapture={() => setState("shown")}
+      className={className}
+    >
       {children}
-    </div>
+    </m.div>
   );
 }

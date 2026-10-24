@@ -1,11 +1,13 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Menu, MessageCircle, Phone, ShieldAlert, X } from "lucide-react";
+import { animate } from "motion/mini";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link, usePathname } from "@/i18n/navigation";
+import { DURATION, EASE_ENTRANCE, prefersReducedMotion, seconds } from "@/lib/motion";
 import type { Nav, NavLink } from "@/lib/nav";
 import { SITE, whatsappHref } from "@/lib/site";
 
@@ -27,6 +29,18 @@ export function MobileNav({ nav }: { nav: Nav }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<Record<View, HTMLButtonElement | null>>({ services: null, industries: null });
   const [view, setView] = useState<View | null>(null);
+  const list = useRef<HTMLElement>(null);
+  const opened = useRef(false);
+
+  // A sub-screen slides in from the inline end and the main screen back from the inline start (mirrored in RTL).
+  useEffect(() => {
+    const el = list.current;
+    if (opened.current && el && !prefersReducedMotion()) {
+      const side = (view ? 1 : -1) * (getComputedStyle(el).direction === "rtl" ? -1 : 1);
+      animate(el, { opacity: [0, 1], transform: [`translateX(${32 * side}px)`, "none"] }, { duration: seconds(DURATION.base), ease: EASE_ENTRANCE });
+    }
+    opened.current = true;
+  }, [view]);
   const close = () => dialog.current?.close();
   const back = () => {
     const from = view!;
@@ -89,7 +103,7 @@ export function MobileNav({ nav }: { nav: Nav }) {
           </Button>
         </div>
 
-        <nav aria-label={t("nav.label")} className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
+        <nav ref={list} aria-label={t("nav.label")} className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
           {view === null && (
             <ul>
               <li>{opens("services", t("nav.services"))}</li>
