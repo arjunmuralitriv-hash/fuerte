@@ -8,15 +8,15 @@ import { DURATION, seconds } from "@/lib/motion";
 /** The film fires this (detail: N) and sets <html data-film-beat="N"> once beat N's idle loop is on screen, or when it
  * lands on beat N if the cut has no loops (scroll-film.tsx). */
 const BEAT_EVENT = "fuerte:film-beat";
-/** A beat card in view shows after this even without the film's signal, unless the film always comes to rest on a loop
- * point (<html data-film-loops>): then the film signals the card itself, also when a loop fails to load. */
+/** A beat card in view shows after this even without the film's signal, unless the film has idle loops
+ * (<html data-film-loops>): then the film signals the card itself, after its loop or a rest by its beat. */
 const BEAT_MAX_WAIT = 4000;
 
 /**
  * Lets the film play before a beat's copy appears, then fades the copy in (home page). The hero copy does not wait:
  * it fades in with CSS from first paint, so it never becomes a late LCP (app/[locale]/page.tsx).
  * - beat N: shows once the film signals beat N (its idle loop is playing, so the visitor sees the scene alive first);
- *   or, unless the film always rests on a loop point, BEAT_MAX_WAIT after the card is half in view at most. Once shown, a card stays: scrolling back just
+ *   or, when the film has no loops, BEAT_MAX_WAIT after the card is half in view at most. Once shown, a card stays: scrolling back just
  *   brings it.
  * - otherwise: shows a beat after the card is half in view.
  * Motion drives it (MASTER.md → Motion): the copy is visible in the server HTML, is hidden instantly at mount (off
