@@ -71,9 +71,9 @@ const bust = (f: FilmFormat) => (f.version ? `?v=${f.version}` : "");
 const frameUrl = (f: FilmFormat, i: number) => `${f.path}${String(i).padStart(4, "0")}.${f.ext}${bust(f)}`;
 
 /** Beat frames first (every beat paints early), then coarse-to-fine strides, so any scroll position has a near frame. */
-function loadOrder(count: number, beats: number[]) {
+function loadOrder(count: number, beats: number[], strides = [16, 8, 4, 2, 1]) {
   const order = new Set(beats);
-  for (const stride of [16, 8, 4, 2, 1]) for (let i = 0; i < count; i += stride) order.add(i);
+  for (const stride of strides) for (let i = 0; i < count; i += stride) order.add(i);
   return [...order];
 }
 
@@ -127,6 +127,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     let seekFrame = -1; // frame the film video was last asked to show
     // WebKit gets the whole file first; elsewhere the video streams and is used as far as it has arrived.
     const whole = /AppleWebKit/.test(navigator.userAgent) && !/Chrome\/|Chromium\/|Edg\/|Android/.test(navigator.userAgent);
+    let blobVideo = true; // videos play from their in-memory copy; false once a browser refuses one (they then play from their URL)
     let filmLoaded = false;
     const frames: (HTMLImageElement | undefined)[] = new Array(format.count);
     const sections = [...document.querySelectorAll<HTMLElement>("[data-beat]")].sort((a, b) => Number(a.dataset.beat) - Number(b.dataset.beat));
@@ -143,7 +144,9 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
 
     // Load frames with a small concurrency limit, decoding each before it can be drawn (no decode jank on scrub).
     const beats = format.beats ?? manifest.beats; // a cut may carry its own beat positions
-    const queue = stills || scrub ? [...beats] : loadOrder(format.count, beats);
+    // While WebKit downloads the whole video, every 8th frame loads too (blended in between), so the film moves from the
+    // start instead of jumping between beat stills; they stop loading once the video is on screen.
+    const queue = stills ? [...beats] : scrub ? (whole ? loadOrder(format.count, beats, [16, 8]) : [...beats]) : loadOrder(format.count, beats);
     const fetchFrame = (i: number) => {
       const img = new Image();
       img.src = frameUrl(format, i);
@@ -171,7 +174,8 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       if (loops) rest(false);
     };
     // The whole video is downloaded before it is used, so a seek never waits on the network (a partly loaded video is
-    // fetched in ranges, and iOS stalls on each seek). If it cannot load or play, the frames load instead.
+    // fetched in ranges, and iOS stalls on each seek). If that copy will not play, the video streams from its URL; if it
+    // cannot load or play at all, the frames load instead.
     const loadFrames = () => {
       if (disposed) return;
       queue.push(...loadOrder(format.count, beats).filter((i) => !beats.includes(i)));
@@ -186,7 +190,15 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
           schedule();
         });
       };
-      film.onerror = loadFrames;
+      film.onerror = () => {
+        // A browser that refuses the in-memory copy plays the video from its URL instead (and the loops from theirs):
+        // the file has just downloaded whole, so the browser cache answers its seeks and it still counts as whole. One
+        // that cannot play the video at all gets the frames.
+        if (!film.src.startsWith("blob:")) return loadFrames();
+        URL.revokeObjectURL(film.src);
+        blobVideo = false;
+        film.src = url;
+      };
       // As more of a streaming video arrives, a film held at the newest frame moves on to the scroll position.
       film.onprogress = schedule;
       if (!whole) {
@@ -241,13 +253,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       return Math.max(0, Math.round(h[i].e + (h[i + 1].s - h[i].e) * t));
     };
     const unflash = (i: number) => (format.skip?.includes(i) ? i - 1 : i);
-    const nearestLoaded = (i: number) => {
-      for (let d = 0; d < format.count; d++) {
-        if (frames[i - d]) return i - d;
-        if (frames[i + d]) return i + d;
-      }
-      return -1;
-    };
+    const usable = (i: number) => !!frames[i] && unflash(i) === i;
 
     const resize = () => {
       const dpr = Math.min(devicePixelRatio || 1, MAX_DPR);
@@ -267,17 +273,19 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
       ctx.globalAlpha = 1;
     };
-    // Draw the film at a fractional position: the frame below, with the frame above blended in by the fraction.
+    // Draw the film at a fractional position: the nearest loaded frame below, with the nearest above blended in by how
+    // far between them it is, so frames still loading (only every 8th, or only the beats) dissolve into one another.
     const draw = (pos: number) => {
-      const a = Math.floor(pos);
-      const t = pos - a;
-      if (frames[a] && frames[a + 1] && t > 0.01 && unflash(a) === a && unflash(a + 1) === a + 1) {
-        paint(frames[a]!, 1);
-        paint(frames[a + 1]!, t);
-      } else {
-        const i = nearestLoaded(unflash(Math.round(pos)));
-        if (i < 0) return;
-        paint(frames[i]!, 1);
+      let lo = Math.floor(pos);
+      let hi = Math.ceil(pos);
+      while (lo >= 0 && !usable(lo)) lo--;
+      while (hi < format.count && !usable(hi)) hi++;
+      if (lo < 0 && hi >= format.count) return;
+      if (lo < 0 || hi >= format.count || hi === lo) paint(frames[lo < 0 || hi === lo ? hi : lo]!, 1);
+      else {
+        const t = (pos - lo) / (hi - lo);
+        paint(frames[lo]!, 1);
+        if (t > 0.01) paint(frames[hi]!, t);
       }
       drawn = pos;
       filmShown();
@@ -308,6 +316,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     film.onseeked = () => {
       if (disposed) return;
       if (!ready && loops) fetchAround(current); // the film is on screen: its nearest loops may download now
+      if (!ready) queue.length = 0; // the video shows every frame now: the in-between stills are no longer needed
       ready = true;
       film.dataset.shown = "true";
       filmShown();
@@ -326,12 +335,14 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const loopUrls = new Map<string, Promise<string>>();
     const queued: LoopJob[] = [];
     let downloading = 0;
+    const loopUrl = (id: string) => `${format.path}loop-${id}.mp4${bust(format)}`;
     const download = (job: LoopJob, priority: "high" | "low") => {
       queued.splice(queued.indexOf(job), 1);
       downloading++;
-      fetch(`${format.path}loop-${job.id}.mp4${bust(format)}`, { signal: abort.signal, priority } as RequestInit)
+      fetch(loopUrl(job.id), { signal: abort.signal, priority } as RequestInit)
         .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${r.status}`))))
-        .then((blob) => job.done(URL.createObjectURL(blob)), job.fail)
+        // Where in-memory copies do not play, the download still fills the browser cache the URL then plays from.
+        .then((blob) => job.done(blobVideo ? URL.createObjectURL(blob) : loopUrl(job.id)), job.fail)
         .finally(() => {
           downloading--;
           nextLoop();
@@ -366,7 +377,14 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       fetchLoop(id, true)
         .then((url) => {
           if (disposed || looping !== id) return;
-          video.src = url;
+          video.src = blobVideo ? url : loopUrl(id);
+          // A browser that refuses the in-memory copy plays this loop, and every one after it, from its URL.
+          video.onerror = () => {
+            if (disposed || looping !== id || !video.src.startsWith("blob:")) return;
+            blobVideo = false;
+            video.src = loopUrl(id);
+            video.load();
+          };
           video.oncanplay = () => {
             if (disposed || looping !== id || video.dataset.shown === "true") return;
             void video.play().then(() => {
