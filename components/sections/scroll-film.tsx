@@ -54,10 +54,13 @@ const FOLLOW = 0.4; // Easing when the page scroll is already smoothed (componen
 const easeFor = (rate: number, ms: number) => 1 - (1 - rate) ** (ms / (1000 / 60));
 const SETTLE_MS = 200; // Scroll stillness before the page counts as resting.
 const AT_POINT = 2; // Distance from a loop point, in frames, that counts as resting on it (its idle loop plays).
-// When the page rests between loop points, it glides on to the next one over this long (ms), by distance in px.
-const glideMs = (px: number) => Math.min(850, 400 + px * 0.5);
+// A page resting this close short of the next loop point eases onto it: a little over one arrow step, so Page Down
+// (90% of the screen, a beat being one screen) also lands on the next beat.
+const MAGNET_PX = 120;
+const glideMs = (px: number) => Math.min(300, 160 + px * 1.2); // that ease, by distance: under 0.3 s
 const CARD_AFTER = 300; // A beat's card comes in once its loop has played this long (ms).
-const LOOP_WAIT = 2500; // A beat's card shows after this even if its loop never starts (a failed download).
+const REST_CARD_MS = 1000; // Resting by a beat this long brings its card in even without its loop (not downloaded yet).
+const NEAR_BEAT = 0.2; // Distance from beat N, in beats, that counts as resting by it (not at the rest point before it).
 const ARRIVE = 0.25; // Distance from beat N, in beats, that still counts as resting on it (its card comes in).
 const FPS = 30; // Frame rate of the cut videos (scripts/encode_film_video.py).
 
@@ -86,12 +89,13 @@ const LAYER = "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full";
  * Chromium and Firefox play it while it downloads, from the opening frames on, and hold the newest frame that has
  * arrived if the scroll runs ahead; WebKit (iOS stalls on seeks into a partly loaded video) waits for the whole file.
  * Until the video can show the current position, the canvas shows the beat stills. The film always shows the scroll
- * position. When scrolling rests on a beat or rest point, its idle loop (same first frame, effects running) fades in
- * over the film and plays until the visitor scrolls again; resting between points, the page glides on to the next point
- * in the direction it was moving (components/motion/smooth-scroll.tsx), and the film follows it there, so the film never
- * runs back against the scroll. Reduced motion and Save-Data load only the beat stills and no loops. Signals
- * "fuerte:film-beat" (detail: N, also <html data-film-beat>) when beat N's card may come in: once that beat's idle loop
- * has played for CARD_AFTER (the visitor has seen the scene alive), or, without loops, once the film lands on beat N.
+ * position, and the page stays where the visitor leaves it (as on pear.no): only a page resting just short of the next
+ * beat or rest point, within one arrow step, eases the last bit onto it (components/motion/smooth-scroll.tsx). Resting on
+ * a point, its idle loop (same first frame, effects running) fades in over the film and plays until the visitor scrolls
+ * again. Loops download one at a time, the one for where the visitor rests first. Reduced motion and Save-Data load only
+ * the beat stills and no loops. Signals "fuerte:film-beat" (detail: N, also <html data-film-beat>) when beat N's card may
+ * come in: once that beat's idle loop has played for CARD_AFTER (the visitor has seen the scene alive), or once the
+ * visitor has rested by beat N for REST_CARD_MS without it, or, without loops, once the film lands on beat N.
  */
 export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -305,16 +309,38 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const points = [...beats.map((f, i) => [f, String(i)] as const), ...(format.rests ?? []).map((f, i) => [f, `m${i}`] as const)].sort(
       (a, b) => a[0] - b[0],
     );
+    // Loops download one at a time, so on a slow connection each arrives as soon as it can instead of all of them
+    // sharing the line with the film video; the loop for where the visitor rests starts at once, ahead of the rest.
+    type LoopJob = { id: string; done: (url: string) => void; fail: (e: unknown) => void };
     const loopUrls = new Map<string, Promise<string>>();
-    const fetchLoop = (id: string) => {
+    const queued: LoopJob[] = [];
+    let downloading = 0;
+    const download = (job: LoopJob, priority: "high" | "low") => {
+      queued.splice(queued.indexOf(job), 1);
+      downloading++;
+      fetch(`${format.path}loop-${job.id}.mp4${bust(format)}`, { signal: abort.signal, priority } as RequestInit)
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${r.status}`))))
+        .then((blob) => job.done(URL.createObjectURL(blob)), job.fail)
+        .finally(() => {
+          downloading--;
+          nextLoop();
+        });
+    };
+    const nextLoop = () => {
+      if (!disposed && downloading === 0 && queued.length) download(queued[0], "low");
+    };
+    const fetchLoop = (id: string, now = false) => {
       let url = loopUrls.get(id);
       if (!url) {
-        url = fetch(`${format.path}loop-${id}.mp4${bust(format)}`, { signal: abort.signal })
-          .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${r.status}`))))
-          .then((blob) => URL.createObjectURL(blob));
+        url = new Promise<string>((done, fail) => {
+          queued.push({ id, done, fail });
+        });
         url.catch(() => loopUrls.delete(id));
         loopUrls.set(id, url);
       }
+      const job = queued.find((j) => j.id === id);
+      if (job && now) download(job, "high");
+      else nextLoop();
       return url;
     };
     const nearestPoint = (frame: number) => points.reduce((a, b) => (Math.abs(b[0] - frame) < Math.abs(a[0] - frame) ? b : a));
@@ -326,10 +352,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const showLoop = (id: string) => {
       if (looping === id) return;
       looping = id;
-      // A beat's card follows its loop; if the loop never fades in, it still comes in after LOOP_WAIT.
-      clearTimeout(cardTimer);
-      if (/^\d+$/.test(id)) cardTimer = window.setTimeout(() => looping === id && cardFor(Number(id)), LOOP_WAIT);
-      fetchLoop(id)
+      fetchLoop(id, true)
         .then((url) => {
           if (disposed || looping !== id) return;
           video.src = url;
@@ -353,7 +376,6 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const hideLoop = () => {
       if (!looping) return;
       looping = "";
-      clearTimeout(cardTimer);
       video.oncanplay = null;
       video.dataset.shown = "false";
     };
@@ -369,12 +391,13 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       for (const p of [points[i + 1], points[i + 2]]) if (p) void fetchLoop(p[1]).catch(() => {});
     };
 
-    let lastTick = 0; // time of the previous frame while the film is moving, 0 when it was at rest
+    let lastTick = 0; // time of the previous frame (or of the scroll that woke the film), 0 when at rest
     const tick = (now: number) => {
       raf = 0;
       const beat = beatValue();
       const target = stills ? frameFor(Math.round(beat)) : frameFor(beat);
-      const k = easeFor(root.dataset.smoothScroll ? FOLLOW : EASE, lastTick ? Math.min(now - lastTick, 100) : 1000 / 60);
+      // A stalled frame counts for two frames at most, so the film slows through a hiccup instead of jumping.
+      const k = easeFor(root.dataset.smoothScroll ? FOLLOW : EASE, Math.min(Math.max(now - lastTick, 0), 34));
       lastTick = now;
       current = current < 0 || stills ? target : current + (target - current) * k;
       // The video takes over once it can show the current position; until then the canvas keeps the stills.
@@ -392,26 +415,31 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       else lastTick = 0;
     };
     function schedule() {
-      if (!raf && !disposed) raf = requestAnimationFrame(tick);
+      if (raf || disposed) return;
+      lastTick ||= performance.now(); // from rest, the first frame eases only as far as the time since the scroll allows
+      raf = requestAnimationFrame(tick);
     }
-    // The page has come to rest. On a loop point, its loop plays. Between points (cuts with rest points), the page
-    // glides on to the next point in the direction it was moving, never back against the visitor's own scroll, and the
-    // film follows the page there. `glide` false only plays a loop (the first rest after load moves nothing).
+    // The page has come to rest. On a loop point, its loop plays. Just short of the next point, within one arrow step in
+    // the direction the page was moving, the page eases the last bit onto it and the film follows; anywhere else the page
+    // stays where the visitor left it, and it never moves back against their scroll. The beat card in view comes in after
+    // REST_CARD_MS of rest even if its loop has not (not downloaded yet, or resting off the beat). `glide` false only
+    // plays a loop (the first rest after load moves nothing).
     const rest = (glide = true) => {
       glideTo = -1;
-      const at = frameFor(beatValue());
+      const b = beatValue();
+      const at = frameFor(b);
       fetchAround(at);
+      const n = Math.round(b);
+      clearTimeout(cardTimer);
+      if (Math.abs(b - n) < NEAR_BEAT) cardTimer = window.setTimeout(() => cardFor(n), REST_CARD_MS);
       const [f, id] = nearestPoint(at);
       if (Math.abs(f - at) <= AT_POINT) return showLoop(id);
       if (!glide) return;
-      // Without rest points (a cut whose rest loops are not rendered yet), only a page resting just short of the beat it
-      // is moving towards glides on to it; it never goes back to the beat it has just left.
-      const b = beatValue();
-      const ahead = dir > 0 ? Math.ceil(b) : Math.floor(b);
-      const near = Math.abs(ahead - b) < ARRIVE ? beats[ahead] : undefined;
-      const next = !format.rests ? near : dir > 0 ? points.find((p) => p[0] > at)?.[0] : points.findLast((p) => p[0] < at)?.[0];
-      if (next === undefined) return;
-      glideTo = scrollYFor(next);
+      const next = dir > 0 ? points.find((p) => p[0] > at) : points.findLast((p) => p[0] < at);
+      if (!next) return;
+      const top = scrollYFor(next[0]);
+      if (Math.abs(top - scrollY) > MAGNET_PX) return;
+      glideTo = top;
       const ms = glideMs(Math.abs(glideTo - scrollY));
       // The smoothed page scroll glides on a timed ease; without it (touch, a coarse pointer), the browser's smooth scroll.
       if (root.dataset.smoothScroll) window.dispatchEvent(new CustomEvent("fuerte:glide-to", { detail: { top: glideTo, ms } }));
@@ -426,21 +454,22 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       if (!loops) return;
       hideLoop();
       clearTimeout(settle);
+      clearTimeout(cardTimer);
       // Arrived from a glide: rest at once (just long enough for the film to catch up), instead of waiting SETTLE_MS.
       const glided = glideTo >= 0 && Math.abs(scrollY - glideTo) < 1;
       settle = window.setTimeout(() => rest(), glided ? 60 : SETTLE_MS);
     };
 
     resize();
-    // With rest points the page always comes to rest on a loop point, so every beat card can wait for its loop
-    // (components/sections/reveal.tsx).
-    if (loops && format.rests) root.dataset.filmLoops = "true";
+    // With loops the film brings every beat card in itself, once its loop or a rest by it (components/sections/reveal.tsx).
+    if (loops) root.dataset.filmLoops = "true";
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", resize);
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
       clearTimeout(settle);
+      clearTimeout(cardTimer);
       hideLoop();
       abort.abort();
       delete root.dataset.filmLoops;
