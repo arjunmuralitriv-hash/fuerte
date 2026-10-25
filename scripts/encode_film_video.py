@@ -6,7 +6,8 @@ frames (lib/film.ts). Re-run it whenever a cut's frames change.
 
 Scrubbing jumps to any frame, forwards or backwards, so the encode favours seeking over size: a keyframe every
 GOP frames and no B-frames, so a seek decodes at most GOP-1 frames. H.264 because every browser, iOS included, decodes it
-in hardware.
+in hardware. The video only shows while the film moves (at rest the 1080p idle loop plays over it), so it is scaled to
+SHORT px on its short side: about 2.5x lighter than 1080p, softness hidden by the motion, and each seek decodes faster.
 
   python3 scripts/encode_film_video.py                 # every cut
   python3 scripts/encode_film_video.py dark/portrait   # one cut
@@ -23,8 +24,9 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 CUTS = [f"{t}/{f}" for t in ("light", "dark") for f in ("landscape", "landscape-rtl", "portrait")]
-CRF = 28
+CRF = 30
 GOP = 8
+SHORT = 720
 
 
 def encode(cut: str, src: Path) -> None:
@@ -34,9 +36,10 @@ def encode(cut: str, src: Path) -> None:
     w, h = Image.open(frames[0]).size
     out = ROOT / "public" / "film-video" / f"{cut.replace('/', '-')}.mp4"
     out.parent.mkdir(exist_ok=True)
+    scale = f"scale=-2:{SHORT}:flags=lanczos" if w > h else f"scale={SHORT}:-2:flags=lanczos"
     ffmpeg = subprocess.Popen(
         ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-framerate", "30", "-i", "-",
-         "-c:v", "libx264", "-preset", "slow", "-crf", str(CRF), "-g", str(GOP), "-bf", "0", "-pix_fmt", "yuv420p",
+         "-vf", scale, "-c:v", "libx264", "-preset", "slow", "-crf", str(CRF), "-g", str(GOP), "-bf", "0", "-pix_fmt", "yuv420p",
          "-movflags", "+faststart", "-an", str(out)],
         stdin=subprocess.PIPE,
     )

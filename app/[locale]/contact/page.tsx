@@ -109,15 +109,18 @@ export default async function ContactPage({ params }: Params) {
                   <address className="not-italic">{tc("common.address")}</address>
                 </dd>
               </div>
-              <div className={row}>
-                <dt className="text-muted-foreground">
-                  <Clock aria-hidden className={icon} />
-                  {t("hours")}
-                </dt>
-                <dd className="mt-1">
-                  {SITE.hours ?? <Placeholder>CONFIRM office hours</Placeholder>}
-                </dd>
-              </div>
+              {/* Production hides the placeholder, so the row goes with it until the hours are confirmed. */}
+              {(SITE.hours || process.env.VERCEL_ENV !== "production") && (
+                <div className={row}>
+                  <dt className="text-muted-foreground">
+                    <Clock aria-hidden className={icon} />
+                    {t("hours")}
+                  </dt>
+                  <dd className="mt-1">
+                    {SITE.hours ?? <Placeholder>CONFIRM office hours</Placeholder>}
+                  </dd>
+                </div>
+              )}
             </dl>
             <Link
               href="/emergency-cyber-response"

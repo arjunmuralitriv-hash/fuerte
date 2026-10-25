@@ -11,6 +11,7 @@ import { SITE, whatsappHref } from "@/lib/site";
 const LEGAL = ["privacy", "cookies", "terms", "legal-information", "accessibility-statement", "ai-assistant-notice", "responsible-disclosure", "data-request"] as const;
 
 const heading = "eyebrow text-muted-foreground";
+const draft = process.env.VERCEL_ENV !== "production";
 const link = "inline-flex min-h-11 items-center text-small text-foreground/80 hover:text-foreground sm:min-h-9";
 
 export async function SiteFooter() {
@@ -112,14 +113,19 @@ export async function SiteFooter() {
             <Link href="/legal/legal-information" className="hover:text-foreground">{t("footer.legalInfo")}</Link>
           </h2>
           <dl className="mt-4 grid gap-x-8 gap-y-3 text-small sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-muted-foreground">{t("footer.legalName")}</dt>
-              <dd className="mt-1">{SITE.legalName ?? <Placeholder>CONFIRM legal name as on CR</Placeholder>}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t("footer.cr")}</dt>
-              <dd className="mt-1 tabular-nums">{SITE.crNumber ?? <Placeholder>CR NUMBER</Placeholder>}</dd>
-            </div>
+            {/* Production hides placeholders, so an unconfirmed row goes too rather than show a label with no value. */}
+            {(SITE.legalName || draft) && (
+              <div>
+                <dt className="text-muted-foreground">{t("footer.legalName")}</dt>
+                <dd className="mt-1">{SITE.legalName ?? <Placeholder>CONFIRM legal name as on CR</Placeholder>}</dd>
+              </div>
+            )}
+            {(SITE.crNumber || draft) && (
+              <div>
+                <dt className="text-muted-foreground">{t("footer.cr")}</dt>
+                <dd className="mt-1 tabular-nums">{SITE.crNumber ?? <Placeholder>CR NUMBER</Placeholder>}</dd>
+              </div>
+            )}
             <div>
               <dt className="text-muted-foreground">{t("footer.authority")}</dt>
               <dd className="mt-1">{t("footer.authorityValue")}</dd>
