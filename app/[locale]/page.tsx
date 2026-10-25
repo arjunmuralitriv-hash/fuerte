@@ -8,6 +8,7 @@ import { Markdown, Placeholder } from "@/components/content/markdown";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
+import { FilmLoader } from "@/components/sections/film-loader";
 import { Reveal } from "@/components/sections/reveal";
 import { ScrollFilm } from "@/components/sections/scroll-film";
 import { Link } from "@/i18n/navigation";
@@ -62,6 +63,7 @@ export default async function HomePage({ params }: Params) {
 
   return (
     <main id="main" lang={home.contentLocale} dir={home.contentLocale === "ar" ? "rtl" : "ltr"}>
+      <FilmLoader />
       {/* The pre-rendered film is fixed behind the beat sections and scrubs to their data-beat positions (lib/film.ts). */}
       <ScrollFilm manifest={homeFilm()} />
       <SmoothScroll />
@@ -72,7 +74,7 @@ export default async function HomePage({ params }: Params) {
             past the hero and fades out there, so it never ends in a hard edge over the film. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 -bottom-32 -z-10 mask-b-from-75% bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/90 md:from-0% md:via-background/60 md:via-50% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
+          className="pointer-events-none absolute inset-x-0 top-0 -bottom-32 -z-10 mask-b-from-75% bg-linear-to-t from-background from-20% via-background/60 via-45% to-transparent to-70% md:bg-linear-to-r md:from-background/95 md:from-0% md:via-background/80 md:via-55% md:to-transparent md:to-100% md:rtl:bg-linear-to-l"
         />
         <div className="container-page flex min-h-[calc(100dvh-4rem)] flex-col justify-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:justify-center md:py-24">
           <h1 id="hero-title" className="max-w-4xl text-display">

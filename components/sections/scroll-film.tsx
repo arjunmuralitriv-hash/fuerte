@@ -280,7 +280,15 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
         paint(frames[i]!, 1);
       }
       drawn = pos;
+      filmShown();
     };
+    // The film shows a frame (a still, or the video when it gets there first): the first-load screen may go
+    // (components/sections/film-loader.tsx).
+    function filmShown() {
+      if (root.dataset.filmReady) return;
+      root.dataset.filmReady = "true";
+      window.dispatchEvent(new Event("fuerte:film-ready"));
+    }
 
     // Show a frame of the film video: one seek at a time, each starting from the newest scroll position once the last lands.
     // Last frame of the streaming video that has arrived, counting only the range from the start.
@@ -302,6 +310,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       if (!ready && loops) fetchAround(current); // the film is on screen: its nearest loops may download now
       ready = true;
       film.dataset.shown = "true";
+      filmShown();
       seek(drawn);
     };
 
@@ -477,6 +486,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       removeEventListener("resize", resize);
       removeEventListener("load", whenIdle);
       delete root.dataset.filmBeat;
+      delete root.dataset.filmReady;
     };
   }, [manifest, theme]);
 
