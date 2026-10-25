@@ -58,10 +58,7 @@ const AT_POINT = 2; // Distance from a loop point, in frames, that counts as res
 // (90% of the screen, a beat being one screen) also lands on the next beat.
 const MAGNET_PX = 120;
 const glideMs = (px: number) => Math.min(300, 160 + px * 1.2); // that ease, by distance: under 0.3 s
-const CARD_AFTER = 300; // A beat's card comes in once its loop has played this long (ms).
-const REST_CARD_MS = 1000; // Resting by a beat this long brings its card in even without its loop (not downloaded yet).
-const NEAR_BEAT = 0.2; // Distance from beat N, in beats, that counts as resting by it (not at the rest point before it).
-const ARRIVE = 0.25; // Distance from beat N, in beats, that still counts as resting on it (its card comes in).
+const CARD_SCROLL_PX = 8; // Scroll into a beat's hold that brings its card in (the next scroll after reaching it).
 const FPS = 30; // Frame rate of the cut videos (scripts/encode_film_video.py).
 
 /** The cut for this screen and page direction (client only). */
@@ -89,13 +86,13 @@ const LAYER = "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full";
  * Chromium and Firefox play it while it downloads, from the opening frames on, and hold the newest frame that has
  * arrived if the scroll runs ahead; WebKit (iOS stalls on seeks into a partly loaded video) waits for the whole file.
  * Until the video can show the current position, the canvas shows the beat stills. The film always shows the scroll
- * position, and the page stays where the visitor leaves it (as on pear.no): only a page resting just short of the next
- * beat or rest point, within one arrow step, eases the last bit onto it (components/motion/smooth-scroll.tsx). Resting on
- * a point, its idle loop (same first frame, effects running) fades in over the film and plays until the visitor scrolls
- * again. Loops download one at a time, the one for where the visitor rests first. Reduced motion and Save-Data load only
- * the beat stills and no loops. Signals "fuerte:film-beat" (detail: N, also <html data-film-beat>) when beat N's card may
- * come in: once that beat's idle loop has played for CARD_AFTER (the visitor has seen the scene alive), or once the
- * visitor has rested by beat N for REST_CARD_MS without it, or, without loops, once the film lands on beat N.
+ * position. Each beat section is taller than the screen and pins its card: through that hold the film stays on the
+ * beat, the next scroll after reaching it brings the card in, and then the film moves on. The page stays where the
+ * visitor leaves it (as on pear.no): only a page resting just short of the next beat or rest point eases the last bit
+ * onto it (components/motion/smooth-scroll.tsx). Resting on a point, its idle loop (same first frame, effects running)
+ * fades in over the film and plays until the film moves on. Loops download one at a time, the one for where the visitor
+ * rests first. Reduced motion and Save-Data load only the beat stills and no loops. Signals "fuerte:film-beat" (detail:
+ * N, also <html data-film-beat>) when beat N's card comes in.
  */
 export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -142,8 +139,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     let dir = 1; // direction the page last moved: 1 down, -1 up
     let lastY = scrollY;
     let glideTo = -1; // page position the page is gliding to (a loop point), -1 when not gliding
-    let cardTimer = 0;
-    let arrived = -1; // beat the film is resting on, -1 between beats
+    const carded: boolean[] = []; // beats whose card has been brought in
 
     // Load frames with a small concurrency limit, decoding each before it can be drawn (no decode jank on scrub).
     const beats = format.beats ?? manifest.beats; // a cut may carry its own beat positions
@@ -207,18 +203,25 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     if (document.readyState === "complete") whenIdle();
     else addEventListener("load", whenIdle, { once: true });
 
-    // Scroll position as a continuous beat value: exactly N when section N's centre is at the viewport centre.
-    const beatValue = () => {
-      const mid = innerHeight / 2;
-      const centres = sections.map((s) => {
+    // Where the film sits on beat N, in page scroll: from section N's top reaching the top of the screen to its bottom
+    // reaching the bottom (a beat section is taller than the screen and pins its card meanwhile: the hold); a section
+    // no taller than the screen only when it is centred.
+    const holds = () =>
+      sections.map((s) => {
         const r = s.getBoundingClientRect();
-        return r.top + r.height / 2;
+        const top = r.top + scrollY;
+        const extra = r.height - innerHeight;
+        return extra > 0 ? { s: top, e: top + extra } : { s: top + extra / 2, e: top + extra / 2 };
       });
-      if (!centres.length || mid <= centres[0]) return 0;
-      for (let i = 0; i < centres.length - 1; i++) {
-        if (mid <= centres[i + 1]) return i + (mid - centres[i]) / (centres[i + 1] - centres[i]);
+    // Scroll position as a continuous beat value: exactly N through beat N's hold, moving on between holds.
+    const beatValue = () => {
+      const h = holds();
+      if (!h.length || scrollY <= h[0].e) return 0;
+      for (let i = 1; i < h.length; i++) {
+        if (scrollY < h[i].s) return i - 1 + (scrollY - h[i - 1].e) / (h[i].s - h[i - 1].e);
+        if (scrollY <= h[i].e) return i;
       }
-      return centres.length - 1;
+      return h.length - 1;
     };
     const frameFor = (beat: number) => {
       const b = beats;
@@ -226,17 +229,16 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       const next = b[Math.min(i + 1, b.length - 1)];
       return b[i] + (next - b[i]) * (beat - i);
     };
-    // The page position that shows a frame: the inverse of frameFor(beatValue()).
-    const scrollYFor = (frame: number) => {
+    // The page position that shows a frame: the inverse of frameFor(beatValue()). A beat frame shows through its whole
+    // hold: moving down, the page reaches it at the start of the hold; moving up, at the end.
+    const scrollYFor = (frame: number, dir = 1) => {
+      const h = holds();
+      const at = beats.indexOf(frame);
+      if (at >= 0) return Math.max(0, Math.round(dir > 0 ? h[at].s : h[at].e));
       let i = 0;
       while (i < beats.length - 2 && frame > beats[i + 1]) i++;
       const t = Math.min(1, Math.max(0, (frame - beats[i]) / (beats[i + 1] - beats[i])));
-      const centre = (s: HTMLElement) => {
-        const r = s.getBoundingClientRect();
-        return r.top + r.height / 2 + scrollY;
-      };
-      const a = centre(sections[i]);
-      return Math.max(0, Math.round(a + (centre(sections[i + 1]) - a) * t - innerHeight / 2));
+      return Math.max(0, Math.round(h[i].e + (h[i + 1].s - h[i].e) * t));
     };
     const unflash = (i: number) => (format.skip?.includes(i) ? i - 1 : i);
     const nearestLoaded = (i: number) => {
@@ -359,19 +361,17 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
           video.oncanplay = () => {
             if (disposed || looping !== id || video.dataset.shown === "true") return;
             void video.play().then(() => {
-              if (disposed || looping !== id) return;
-              video.dataset.shown = "true";
-              // Once the beat's scene has been alive on screen for a moment, its card follows, even if the visitor
-              // moves on straight away; while they read it, the loops ahead download (ontransitionend).
-              if (/^\d+$/.test(id)) {
-                clearTimeout(cardTimer);
-                window.setTimeout(() => cardFor(Number(id)), CARD_AFTER);
-              }
+              if (!disposed && looping === id) video.dataset.shown = "true";
             }, () => {});
           };
           video.load();
         })
         .catch(() => {});
+    };
+    // The beat whose hold the page is in, as a loop id ("" between holds).
+    const beatLoop = () => {
+      const b = beatValue();
+      return Number.isInteger(b) ? String(b) : "";
     };
     const hideLoop = () => {
       if (!looping) return;
@@ -403,13 +403,13 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       // The video takes over once it can show the current position; until then the canvas keeps the stills.
       if (!ready && filmLoaded && !film.seeking && seekFrame < 0 && lastArrived() >= Math.round(current)) seek(current);
       if (Math.abs(current - drawn) > 0.004 || drawn < 0 || (ready && seekFrame < Math.round(current))) (ready ? seek : draw)(current);
-      // Arrived on beat N: the film has caught up with the scroll, which rests near N, and a frame is on screen.
-      const n = Math.round(beat);
-      const at = drawn >= 0 && Math.abs(target - current) < 0.5 && Math.abs(beat - n) < ARRIVE ? n : -1;
-      if (at !== arrived) {
-        arrived = at;
-        if (at < 0) delete root.dataset.filmBeat;
-        else if (!loops) cardFor(at); // with loops, the card waits for the beat's loop instead
+      // The scroll after reaching beat N (into its hold) brings its card in; a card once in stays.
+      const h = holds();
+      for (let i = 1; i < h.length; i++) {
+        if (!carded[i] && scrollY > h[i].s + CARD_SCROLL_PX) {
+          carded[i] = true;
+          cardFor(i);
+        }
       }
       if (!stills && Math.abs(target - current) > 0.02) schedule();
       else lastTick = 0;
@@ -419,25 +419,20 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       lastTick ||= performance.now(); // from rest, the first frame eases only as far as the time since the scroll allows
       raf = requestAnimationFrame(tick);
     }
-    // The page has come to rest. On a loop point, its loop plays. Just short of the next point, within one arrow step in
-    // the direction the page was moving, the page eases the last bit onto it and the film follows; anywhere else the page
-    // stays where the visitor left it, and it never moves back against their scroll. The beat card in view comes in after
-    // REST_CARD_MS of rest even if its loop has not (not downloaded yet, or resting off the beat). `glide` false only
-    // plays a loop (the first rest after load moves nothing).
+    // The page has come to rest. On a loop point (anywhere in a beat's hold), its loop plays. Just short of the next
+    // point, within MAGNET_PX in the direction the page was moving, the page eases the last bit onto it and the film
+    // follows; anywhere else the page stays where the visitor left it, and it never moves back against their scroll.
+    // `glide` false only plays a loop (the first rest after load moves nothing).
     const rest = (glide = true) => {
       glideTo = -1;
-      const b = beatValue();
-      const at = frameFor(b);
+      const at = frameFor(beatValue());
       fetchAround(at);
-      const n = Math.round(b);
-      clearTimeout(cardTimer);
-      if (Math.abs(b - n) < NEAR_BEAT) cardTimer = window.setTimeout(() => cardFor(n), REST_CARD_MS);
       const [f, id] = nearestPoint(at);
       if (Math.abs(f - at) <= AT_POINT) return showLoop(id);
       if (!glide) return;
       const next = dir > 0 ? points.find((p) => p[0] > at) : points.findLast((p) => p[0] < at);
       if (!next) return;
-      const top = scrollYFor(next[0]);
+      const top = scrollYFor(next[0], dir);
       if (Math.abs(top - scrollY) > MAGNET_PX) return;
       glideTo = top;
       const ms = glideMs(Math.abs(glideTo - scrollY));
@@ -452,27 +447,26 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
         lastY = scrollY;
       }
       if (!loops) return;
-      hideLoop();
+      // Scrolling within a beat's hold keeps the film on the beat, so its loop plays on while the card comes in.
+      if (looping !== beatLoop()) hideLoop();
       clearTimeout(settle);
-      clearTimeout(cardTimer);
       // Arrived from a glide: rest at once (just long enough for the film to catch up), instead of waiting SETTLE_MS.
       const glided = glideTo >= 0 && Math.abs(scrollY - glideTo) < 1;
       settle = window.setTimeout(() => rest(), glided ? 60 : SETTLE_MS);
     };
 
     resize();
-    // With loops the film brings every beat card in itself, once its loop or a rest by it (components/sections/reveal.tsx).
-    if (loops) root.dataset.filmLoops = "true";
+    // The film brings every beat card in itself, with the scroll into its hold (components/sections/reveal.tsx).
+    root.dataset.filmCards = "true";
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", resize);
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
       clearTimeout(settle);
-      clearTimeout(cardTimer);
       hideLoop();
       abort.abort();
-      delete root.dataset.filmLoops;
+      delete root.dataset.filmCards;
       film.onloadeddata = film.onseeked = film.onerror = film.onprogress = null;
       film.dataset.shown = "false";
       if (film.src) URL.revokeObjectURL(film.src);
