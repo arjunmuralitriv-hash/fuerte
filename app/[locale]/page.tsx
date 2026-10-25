@@ -91,15 +91,15 @@ export default async function HomePage({ params }: Params) {
         </div>
       </section>
 
-      {/* Beats 1–6: one viewport each, so each layer of the tower is centred while its copy is read. Copy sits on a near-opaque card (no blur: blurring the moving film costs every frame). */}
+      {/* Beats 1–6: each a screen plus a hold. While the section fills the screen its card is pinned and the film stays on the beat: the next scroll brings the card in, then the film moves on (scroll-film.tsx). Copy sits on a near-opaque card (no blur: blurring the moving film costs every frame). */}
       <MotionProvider>
         {beats.map((beat, i) => {
           const n = i + 1;
           const proof = n === 5 ? stats.filter((s) => showClaim(s.value)) : [];
           return (
-            <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="scroll-mt-16">
+            <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="h-[140dvh] scroll-mt-16">
               {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
-              <div className="container-page flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
+              <div className="container-page sticky top-0 flex h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
                 <Reveal beat={n} className="w-full max-w-xl">
                   <div className="rounded-3xl border bg-background/90 p-5 md:p-8 dark:bg-background/85">
                     <h2 id={`beat-${n}-title`} className="text-h2">
