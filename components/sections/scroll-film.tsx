@@ -79,6 +79,14 @@ function loadOrder(count: number, beats: number[], strides = [16, 8, 4, 2, 1]) {
 
 const LAYER = "pointer-events-none fixed inset-x-0 top-0 -z-10 h-lvh w-full";
 
+/** With ?filmdebug in the URL, the film reports how far it got to window.__film, for the panel in film-debug.tsx. */
+export type FilmDebug = { effect?: string; state?: () => Record<string, unknown> };
+function debugFilm(report: FilmDebug) {
+  if (!location.search.includes("filmdebug")) return;
+  const w = window as Window & { __film?: FilmDebug };
+  w.__film = { ...w.__film, ...report };
+}
+
 /**
  * Pre-rendered film scrubbed by scroll (docs/film-plan.md), fixed behind the page and driven by the data-beat
  * contract: the film sits on manifest.beats[N] when section N is centred. Between frames it blends the two nearest,
@@ -111,10 +119,10 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const film = filmRef.current;
     const video = videoRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !film || !video || !ctx) return;
+    if (!canvas || !film || !video || !ctx) return debugFilm({ effect: `stopped: no ${!ctx ? "2d context" : "element"}` });
     const root = document.documentElement;
     // The hydration pass still sees the server snapshot ("dark"); skip it so the wrong cut is never fetched.
-    if (theme !== (root.classList.contains("dark") ? "dark" : "light")) return;
+    if (theme !== (root.classList.contains("dark") ? "dark" : "light")) return debugFilm({ effect: "waiting for the theme" });
     const format = pick(manifest.themes[theme]);
     const stills =
       matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
@@ -482,6 +490,24 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       settle = window.setTimeout(() => rest(), glided ? 60 : SETTLE_MS);
     };
 
+    debugFilm({
+      effect: "running",
+      state: () => ({
+        cut: format.path,
+        video: scrub ?? "none (frames)",
+        whole,
+        blobVideo,
+        stills,
+        loops: !!loops,
+        framesLoaded: frames.filter(Boolean).length,
+        framesQueued: queue.length,
+        filmLoaded,
+        videoReady: ready,
+        drawn: Math.round(drawn),
+        current: Math.round(current),
+        looping: looping || "-",
+      }),
+    });
     resize();
     // The film brings every beat card in itself, with the scroll into its hold (components/sections/reveal.tsx).
     root.dataset.filmCards = "true";
@@ -510,10 +536,11 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
 
   return (
     <>
-      <canvas ref={canvasRef} aria-hidden className={className ?? LAYER} />
+      <canvas ref={canvasRef} aria-hidden data-film="canvas" className={className ?? LAYER} />
       <video
         ref={filmRef}
         aria-hidden
+        data-film="video"
         muted
         playsInline
         preload="auto"
@@ -523,6 +550,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       <video
         ref={videoRef}
         aria-hidden
+        data-film="loop"
         muted
         loop
         playsInline

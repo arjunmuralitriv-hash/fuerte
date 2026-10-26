@@ -8,6 +8,7 @@ import { Markdown, Placeholder } from "@/components/content/markdown";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
+import { FilmDebug } from "@/components/sections/film-debug";
 import { FilmLoader } from "@/components/sections/film-loader";
 import { Reveal } from "@/components/sections/reveal";
 import { ScrollFilm } from "@/components/sections/scroll-film";
@@ -66,6 +67,8 @@ export default async function HomePage({ params }: Params) {
       <FilmLoader />
       {/* The pre-rendered film is fixed behind the beat sections and scrubs to their data-beat positions (lib/film.ts). */}
       <ScrollFilm manifest={homeFilm()} />
+      {/* Shows only with ?filmdebug: a visitor's screenshot of it says why the film failed on their device. */}
+      <FilmDebug />
       <SmoothScroll />
 
       {/* Beat 0. The headline paints at once (it is the LCP element); the rest of the hero fades in from first paint, never later (a late fade-in would become the LCP). */}
