@@ -47,6 +47,10 @@ const nextConfig: NextConfig = {
   // Lets parallel dev servers use separate output folders (e.g. NEXT_DIST_DIR=.next-scene).
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // lib/film.ts checks which film files exist when a page is built, so file tracing copied all of public/film and
+  // public/film-video (about 0.55 GB) into every page function, on every deployment. The pages are prerendered and the
+  // CDN serves those files, so no function needs them.
+  outputFileTracingExcludes: { "**": ["public/film/**/*", "public/film-video/**/*"] },
   // Inlined into server and browser bundles, so the browser SDK can be dropped entirely when it is empty.
   env: { SENTRY_DSN },
   async rewrites() {
