@@ -7,7 +7,8 @@ import { preload } from "react-dom";
  * `beats` overrides the manifest's beat positions for this cut; `version` is added to every URL so a re-render is never
  * served from the browser cache (frames are cached for a week). `rests` are frames between beats with their own idle loop
  * (`loop-m0.mp4` …), so a visitor who stops mid-transition also sees the scene alive. `video` is the same cut as one video, scrubbed in place of
- * the frames when given. `skip` lists frames never shown (a flash at a cut): the frame before stands in. */
+ * the frames when given (H.264); `av1` and `hevc` are the same video in those codecs, used where the device decodes them in
+ * hardware. `skip` lists frames never shown (a flash at a cut): the frame before stands in. */
 export type FilmFormat = {
   path: string;
   ext: string;
@@ -16,6 +17,8 @@ export type FilmFormat = {
   beats?: number[];
   version?: string;
   video?: string;
+  av1?: string;
+  hevc?: string;
   rests?: number[];
   skip?: number[];
 };
@@ -127,9 +130,28 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     const stills =
       matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
     const loops = format.loops && !stills;
-    // The cut videos are H.264 (High profile, 1080p): browsers built without it keep the frames.
+    // The cut videos are 1080p; every browser gets at least the H.264 one, and browsers built without H.264 keep the frames.
     const scrub =
-      !stills && new URLSearchParams(location.search).get("film") !== "frames" && film.canPlayType('video/mp4; codecs="avc1.640032"') ? format.video : undefined;
+      !stills && new URLSearchParams(location.search).get("film") !== "frames" && film.canPlayType('video/mp4; codecs="avc1.640028"') ? format.video : undefined;
+    // AV1, then HEVC, where this device decodes it in hardware: sharper than H.264 at the same size, and a hardware
+    // decoder keeps every seek quick. Software AV1 on a phone would stutter, so anywhere else it is H.264.
+    const bestVideo = async () => {
+      // ?film=av1|hevc|h264 forces one, to compare them.
+      const forced = new URLSearchParams(location.search).get("film");
+      if (forced === "h264") return scrub!;
+      if ((forced === "av1" || forced === "hevc") && format[forced]) return format[forced];
+      const [width, height] = innerHeight > innerWidth ? [1080, 1920] : [1920, 1080];
+      for (const [url, codec] of [[format.av1, "av01.0.08M.08"], [format.hevc, "hvc1.1.6.L120.90"]] as const) {
+        const contentType = `video/mp4; codecs="${codec}"`;
+        if (!url || !film.canPlayType(contentType)) continue;
+        const info = await navigator.mediaCapabilities
+          ?.decodingInfo({ type: "file", video: { contentType, width, height, bitrate: 5_000_000, framerate: 30 } })
+          .catch(() => undefined);
+        if (info?.supported && info.powerEfficient) return url;
+      }
+      return scrub!;
+    };
+    let playing = ""; // the video chosen for this device
     const abort = new AbortController();
     let ready = false; // the film video is on screen and scrubbed instead of the canvas
     let seekFrame = -1; // frame the film video was last asked to show
@@ -176,7 +198,12 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
     // The opening frame (already preloaded) loads now; the rest wait until the page has loaded and the main thread is
     // idle, so the film never competes with the page's own resources.
     const startRest = () => {
-      if (scrub) loadFilm(scrub);
+      if (scrub)
+        void bestVideo().then((url) => {
+          if (disposed) return;
+          playing = url;
+          loadFilm(url);
+        });
       for (let k = 0; k < CONCURRENCY; k++) pump();
       // The opening scene comes alive as soon as its loop has downloaded, if the visitor has not scrolled away.
       if (loops) rest(false);
@@ -494,7 +521,7 @@ export function ScrollFilm({ manifest, className }: { manifest: FilmManifest; cl
       effect: "running",
       state: () => ({
         cut: format.path,
-        video: scrub ?? "none (frames)",
+        video: scrub ? playing || "choosing" : "none (frames)",
         whole,
         blobVideo,
         stills,

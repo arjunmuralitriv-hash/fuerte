@@ -27,11 +27,14 @@ const cut = (theme: "light" | "dark", format: "landscape" | "landscape-rtl" | "p
   const loops = [0, 1, 2, 3, 4, 5, 6].every((n) => existsSync(join(dir, `loop-${n}.mp4`)));
   // Rest points between beats (build_film.py MIDS, as frame positions), once all six of their loops are rendered.
   const rests = v === V2 && loops && [0, 1, 2, 3, 4, 5].every((n) => existsSync(join(dir, `loop-m${n}.mp4`))) ? REST_FRAMES : undefined;
-  // The cut as one video (scripts/encode_film_video.py), scrubbed instead of the frames when present. Its size is the
-  // cache key, so a re-encode is never served from the browser cache.
-  const file = join(process.cwd(), "public", "film-video", `${theme}-${format}.mp4`);
-  const video = existsSync(file) ? `/film-video/${theme}-${format}.mp4?v=${statSync(file).size}` : undefined;
-  return { path, ext: "avif", loops, video, rests, ...v };
+  // The cut as one video (scripts/encode_film_video.py), scrubbed instead of the frames when present: H.264 for every
+  // browser, and AV1 and HEVC, sharper at the same size, for devices that decode them in hardware. Each file's size is
+  // its cache key, so a re-encode is never served from the browser cache.
+  const videoFile = (suffix: string) => {
+    const file = join(process.cwd(), "public", "film-video", `${theme}-${format}${suffix}`);
+    return existsSync(file) ? `/film-video/${theme}-${format}${suffix}?v=${statSync(file).size}` : undefined;
+  };
+  return { path, ext: "avif", loops, video: videoFile(".mp4"), av1: videoFile(".av1.mp4"), hevc: videoFile(".hevc.mp4"), rests, ...v };
 };
 
 export function homeFilm(): FilmManifest {
