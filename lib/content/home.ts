@@ -1,5 +1,5 @@
 import type { Locale } from "@/i18n/routing";
-import { getSource, hasPlaceholder } from "@/lib/content";
+import { getSource } from "@/lib/content";
 
 export type Beat = { eyebrow: string; title: string; body: string };
 export type Extra = { title: string; body: string };
@@ -63,5 +63,3 @@ export function getHome(locale: Locale) {
   return { fm: source.fm, contentLocale: source.contentLocale, hero, beats, stats, extras, facts };
 }
 
-/** Unverified figures never reach production (Consumer Protection Law 8/2008, plan section 5). */
-export const showClaim = (value: string) => !hasPlaceholder(value) || process.env.VERCEL_ENV !== "production";
