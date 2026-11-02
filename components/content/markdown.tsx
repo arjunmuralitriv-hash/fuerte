@@ -25,10 +25,9 @@ const textOf = (children: React.ReactNode): string =>
 
 const MD_LINK = /^\[([^\]]+)\]\(([^)]+)\)$/;
 
-/** Visible "to confirm" marker for unanswered client questions (pre-launch only: production renders nothing, and
- * scripts/content-check.mjs fails a production build while any remain). */
+/** Visible "to confirm" marker for unanswered client questions (scripts/content-check.mjs fails the launch build while any
+ * remain). */
 export function Placeholder({ children }: { children: React.ReactNode }) {
-  if (process.env.VERCEL_ENV === "production") return null;
   return (
     <mark
       title="To be confirmed by Fuerte"

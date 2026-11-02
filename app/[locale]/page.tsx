@@ -15,7 +15,7 @@ import { ScrollFilm } from "@/components/sections/scroll-film";
 import { Link } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
 import { getSectionPages, hasPlaceholder } from "@/lib/content";
-import { getHome, showClaim } from "@/lib/content/home";
+import { getHome } from "@/lib/content/home";
 import { homeFilm } from "@/lib/film";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -100,11 +100,11 @@ export default async function HomePage({ params }: Params) {
       <MotionProvider>
         {beats.map((beat, i) => {
           const n = i + 1;
-          const proof = n === 5 ? stats.filter((s) => showClaim(s.value)) : [];
+          const proof = n === 5 ? stats : [];
           return (
-            <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="h-[140dvh] scroll-mt-16">
-              {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. */}
-              <div className="container-page sticky top-0 flex h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
+            <section key={n} id={`beat-${n}`} data-beat={n} aria-labelledby={`beat-${n}-title`} className="min-h-[140dvh] scroll-mt-16">
+              {/* Phones: compact card in the bottom third so the scene keeps the top of the screen. A card taller than the screen grows the section and scrolls through instead of being cut off. */}
+              <div className="container-page sticky top-0 flex min-h-dvh items-end pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:items-center md:py-16">
                 <Reveal beat={n} className="w-full max-w-xl">
                   <div className="rounded-3xl border bg-background/90 p-5 md:p-8 dark:bg-background/85">
                     <h2 id={`beat-${n}-title`} className="text-h2">
@@ -195,7 +195,7 @@ export default async function HomePage({ params }: Params) {
             <div data-rise className="rounded-2xl border p-6 md:p-8">
               <h2 id="facts-title" className="eyebrow font-sans text-muted-foreground">{t("home.atAGlance")}</h2>
               <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-                {facts.filter((f) => showClaim(f.value)).map((f) => (
+                {facts.map((f) => (
                   <div key={f.label}>
                     <dt className="text-small text-muted-foreground">{f.label}</dt>
                     <dd className="mt-1 text-body">

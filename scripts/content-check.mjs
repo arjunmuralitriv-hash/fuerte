@@ -3,7 +3,7 @@
 // - lib/site.ts: company facts still null, which the footer and contact page show as marks
 // Usage: npm run content:check            lists them and fails if any remain
 //        node scripts/content-check.mjs --launch   (in `npm run build`) fails only when CONTENT_GATE=on, which is set
-//        in Vercel at launch; until then production deploys build, with the marks hidden (components/content/markdown.tsx)
+//        in Vercel at launch; until then production deploys build, with the marks showing (components/content/markdown.tsx)
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";

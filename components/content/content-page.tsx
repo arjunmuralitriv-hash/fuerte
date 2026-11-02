@@ -117,7 +117,7 @@ export async function ContentPage({ locale, slug, form }: { locale: Locale; slug
 
       <div className="container-page grid gap-12 py-12 md:py-16 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
         <article id="article" lang={page.contentLocale} dir={page.contentLocale === "ar" ? "rtl" : "ltr"} className="min-w-0 max-w-prose">
-          {hasPlaceholder(page.lead + page.body) && process.env.VERCEL_ENV !== "production" && (
+          {hasPlaceholder(page.lead + page.body) && (
             <p className="mb-10 text-small text-muted-foreground">
               <Placeholder>CONFIRM</Placeholder> {t("draftNotice")}
             </p>
